@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- SENTINEL — Autonomous Web Intelligence Daemon -->
+    <key>Label</key>
+    <string>com.sentinel.daemon</string>
+
+    <!-- Command to execute -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/miniconda3/bin/sentinel</string>
+        <string>-c</string>
+        <string>/Users/dakshpatel/infinite_research/sentinel/sentinel.toml</string>
+        <string>start</string>
+    </array>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>/Users/dakshpatel/infinite_research/sentinel</string>
+
+    <!-- Start on login -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Auto-restart on crash -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <!-- Throttle restarts: wait 30s between restart attempts -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <!-- Logs -->
+    <key>StandardOutPath</key>
+    <string>/Users/dakshpatel/infinite_research/sentinel/data/logs/sentinel.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/dakshpatel/infinite_research/sentinel/data/logs/sentinel.stderr.log</string>
+
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/miniconda3/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/dakshpatel</string>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+    </dict>
+
+    <!-- Resource limits -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>4096</integer>
+    </dict>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>8192</integer>
+    </dict>
+
+    <!-- Nice level: slightly lower priority to not impact interactive use -->
+    <key>Nice</key>
+    <integer>5</integer>
+
+    <!-- Process type: background -->
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

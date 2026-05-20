@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENTINEL — Knowledge Graph</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0e1a;
+  color: #c8d6e5;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ─── TOP BAR ─────────────────────────── */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 48px;
+  background: rgba(10, 14, 26, 0.95);
+  border-bottom: 1px solid #1a2038;
+  display: flex; align-items: center;
+  padding: 0 20px;
+  z-index: 100;
+  gap: 24px;
+}
+#topbar .logo { color: #00d4ff; font-weight: 700; font-size: 14px; letter-spacing: 2px; }
+#topbar .stat { font-size: 12px; color: #6b7c93; }
+#topbar .stat b { color: #00d4ff; font-weight: 600; }
+#topbar .controls { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+#topbar .controls label { font-size: 11px; color: #6b7c93; }
+#topbar .controls select, #topbar .controls input {
+  background: #111827; border: 1px solid #1e2d4a; color: #c8d6e5;
+  padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: inherit;
+}
+#topbar .controls button {
+  background: #0d2847; border: 1px solid #1e3a5f; color: #00d4ff;
+  padding: 4px 12px; border-radius: 4px; font-size: 11px; cursor: pointer;
+  font-family: inherit;
+}
+#topbar .controls button:hover { background: #163d6a; }
+
+.back-link {
+  color: #6b7c93; text-decoration: none; font-size: 12px;
+  border: 1px solid #1e2d4a; padding: 4px 10px; border-radius: 4px;
+}
+.back-link:hover { color: #00d4ff; border-color: #1e3a5f; }
+
+/* ─── GRAPH CANVAS ────────────────────── */
+#graph-container {
+  position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
+}
+svg { width: 100%; height: 100%; }
+
+/* ─── TOOLTIP ─────────────────────────── */
+#tooltip {
+  position: fixed;
+  background: rgba(15, 20, 35, 0.96);
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 12px;
+  max-width: 340px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 200;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+#tooltip.visible { opacity: 1; }
+#tooltip h3 { color: #00d4ff; font-size: 14px; margin-bottom: 6px; font-weight: 600; }
+#tooltip .meta { color: #6b7c93; margin-bottom: 4px; }
+#tooltip .meta b { color: #c8d6e5; }
+#tooltip .edges-list { margin-top: 8px; border-top: 1px solid #1e2d4a; padding-top: 8px; }
+#tooltip .edge-item { color: #8b9dc3; font-size: 11px; margin: 2px 0; }
+#tooltip .edge-item .rel { color: #f0a500; }
+
+/* ─── INFO PANEL (right) ──────────────── */
+#info-panel {
+  position: fixed; top: 48px; right: 0; bottom: 0; width: 320px;
+  background: rgba(10, 14, 26, 0.95);
+  border-left: 1px solid #1a2038;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 50;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+#info-panel.open { transform: translateX(0); }
+#info-panel h2 { color: #00d4ff; font-size: 16px; margin-bottom: 16px; }
+#info-panel .close-btn {
+  position: absolute; top: 12px; right: 12px;
+  background: none; border: none; color: #6b7c93; cursor: pointer; font-size: 18px;
+}
+#info-panel .section { margin-bottom: 16px; }
+#info-panel .section h4 { color: #8b9dc3; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+#info-panel .kv { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #0d1525; }
+#info-panel .kv .label { color: #6b7c93; font-size: 11px; }
+#info-panel .kv .value { color: #c8d6e5; font-size: 12px; font-weight: 500; }
+#info-panel .edge-list-item {
+  padding: 6px 0; border-bottom: 1px solid #0d1525; font-size: 11px;
+}
+#info-panel .edge-list-item .target { color: #00d4ff; }
+#info-panel .edge-list-item .reltype { color: #f0a500; font-size: 10px; }
+#info-panel .edge-list-item .conf { color: #6b7c93; }
+
+/* ─── LEGEND ──────────────────────────── */
+#legend {
+  position: fixed; bottom: 20px; left: 20px;
+  background: rgba(10, 14, 26, 0.9);
+  border: 1px solid #1a2038;
+  border-radius: 8px;
+  padding: 12px 16px;
+  z-index: 50;
+  font-size: 11px;
+}
+#legend h4 { color: #6b7c93; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ─── TIMELINE BAR ────────────────────── */
+#timeline {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(10, 14, 26, 0.9);
+  border: 1px solid #1a2038;
+  border-radius: 8px;
+  padding: 10px 20px;
+  z-index: 50;
+  font-size: 11px;
+  display: flex; align-items: center; gap: 12px;
+  min-width: 400px;
+}
+#timeline label { color: #6b7c93; white-space: nowrap; }
+#timeline #growth-count { color: #00d4ff; font-weight: 600; }
+#timeline input[type="range"] {
+  flex: 1; min-width: 120px; accent-color: #00d4ff;
+  -webkit-appearance: none; height: 4px; background: #1e2d4a; border-radius: 2px;
+}
+#timeline input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: #00d4ff; cursor: pointer;
+}
+#timeline .time-label { color: #c8d6e5; font-size: 10px; min-width: 100px; text-align: center; }
+
+/* ─── SEARCH BOX ─────────────────────── */
+#search-box {
+  background: #111827; border: 1px solid #1e2d4a; color: #c8d6e5;
+  padding: 4px 10px; border-radius: 4px; font-size: 11px;
+  font-family: inherit; width: 140px;
+}
+#search-box::placeholder { color: #4b5563; }
+#search-results {
+  position: fixed; top: 48px; left: 0; right: 0;
+  background: rgba(10, 14, 26, 0.97);
+  border-bottom: 1px solid #1e3a5f;
+  max-height: 200px; overflow-y: auto;
+  z-index: 150; display: none;
+  padding: 8px 20px;
+}
+.search-result {
+  padding: 6px 10px; cursor: pointer; font-size: 12px;
+  border-radius: 4px; display: flex; align-items: center; gap: 8px;
+}
+.search-result:hover { background: #111827; }
+.search-result .sr-type { color: #6b7c93; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <a href="/" class="back-link">&larr; Dashboard</a>
+  <span class="logo">KNOWLEDGE GRAPH</span>
+  <span class="stat">Nodes: <b id="stat-nodes">0</b></span>
+  <span class="stat">Edges: <b id="stat-edges">0</b></span>
+  <span class="stat">Communities: <b id="stat-communities">0</b></span>
+  <span class="stat">Avg Confidence: <b id="stat-confidence">0</b></span>
+  <div class="controls">
+    <input id="search-box" type="text" placeholder="Search entities..." autocomplete="off">
+    <label>Color by:</label>
+    <select id="color-mode">
+      <option value="type">Entity Type</option>
+      <option value="community">Community</option>
+      <option value="pagerank">PageRank</option>
+    </select>
+    <label>Size by:</label>
+    <select id="size-mode">
+      <option value="pagerank">PageRank</option>
+      <option value="mentions">Mentions</option>
+      <option value="centrality">Centrality</option>
+    </select>
+    <label>Min mentions:</label>
+    <input id="min-mentions" type="number" value="1" min="1" max="100" style="width:50px">
+    <label><input id="connected-only" type="checkbox" checked> Connected only</label>
+    <button id="btn-refresh" onclick="loadGraph()">Refresh</button>
+    <button id="btn-recenter" onclick="recenter()">Re-center</button>
+  </div>
+</div>
+
+<!-- GRAPH CANVAS -->
+<div id="graph-container">
+  <svg id="graph-svg"></svg>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tooltip"></div>
+
+<!-- INFO PANEL -->
+<div id="info-panel">
+  <button class="close-btn" onclick="closePanel()">&times;</button>
+  <div id="panel-content"></div>
+</div>
+
+<!-- LEGEND -->
+<div id="legend">
+  <h4>Entity Types</h4>
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Organization</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Person</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Location</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div> Product</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Technology</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Event</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div> Concept</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div> Regulation</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#84cc16"></div> Funding</div>
+</div>
+
+<!-- SEARCH RESULTS -->
+<div id="search-results"></div>
+
+<!-- TIMELINE -->
+<div id="timeline">
+  <label>Timeline:</label>
+  <input type="range" id="time-slider" min="0" max="100" value="100">
+  <span class="time-label" id="time-label">All time</span>
+  <span style="color:#1e2d4a">|</span>
+  <span id="growth-count" style="font-size:10px">watching...</span>
+</div>
+
+<!-- STATS PANEL (bottom right) -->
+<div id="stats-panel" style="
+  position: fixed; bottom: 20px; right: 20px;
+  background: rgba(10, 14, 26, 0.92);
+  border: 1px solid #1a2038;
+  border-radius: 8px;
+  padding: 14px 18px;
+  z-index: 50;
+  font-size: 11px;
+  max-width: 260px;
+  max-height: 400px;
+  overflow-y: auto;
+">
+  <h4 style="color: #6b7c93; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Edge Types</h4>
+  <div id="edge-type-bars"></div>
+  <h4 style="color: #6b7c93; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 8px;">Top Hubs</h4>
+  <div id="top-hubs"></div>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────
+const TYPE_COLORS = {
+  organization: '#3b82f6',
+  person: '#8b5cf6',
+  location: '#10b981',
+  product: '#06b6d4',
+  technology: '#f59e0b',
+  event: '#ef4444',
+  concept: '#ec4899',
+  regulation: '#6366f1',
+  funding_round: '#84cc16',
+  unknown: '#4b5563',
+};
+
+const EDGE_COLORS = {
+  'COMPETES_WITH': '#ef4444', 'ACQUIRED': '#f59e0b', 'FOUNDED_BY': '#8b5cf6',
+  'WORKS_AT': '#8b5cf6', 'EMPLOYS': '#8b5cf6', 'PARTNERS_WITH': '#10b981',
+  'PRODUCES': '#06b6d4', 'LOCATED_IN': '#10b981', 'INVESTS_IN': '#84cc16',
+  'RAISED_FUNDING': '#84cc16', 'USES_TECHNOLOGY': '#3b82f6', 'AUTHORED': '#ec4899',
+  'FILED_PATENT': '#f59e0b', 'SUPERSEDES': '#6366f1',
+};
+
+// Generate distinct community colors
+function communityColor(id) {
+  const hue = (id * 137.508) % 360;
+  return `hsl(${hue}, 65%, 55%)`;
+}
+
+// ─── STATE ───────────────────────────────────────
+let simulation, svg, g, linkG, edgeLabelG, nodeG, labelG;
+let currentNodes = [], currentEdges = [];
+let prevNodeCount = 0;
+let width, height;
+
+// ─── INIT ────────────────────────────────────────
+function init() {
+  const container = document.getElementById('graph-container');
+  width = container.clientWidth;
+  height = container.clientHeight;
+
+  svg = d3.select('#graph-svg')
+    .attr('viewBox', [0, 0, width, height]);
+
+  // Zoom behavior
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 8])
+    .on('zoom', (event) => g.attr('transform', event.transform));
+
+  svg.call(zoom);
+
+  g = svg.append('g');
+
+  // Arrow markers for directed edges
+  svg.append('defs').selectAll('marker')
+    .data(['arrow'])
+    .join('marker')
+    .attr('id', 'arrow')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20)
+    .attr('refY', 0)
+    .attr('markerWidth', 6)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-5L10,0L0,5')
+    .attr('fill', '#2a3a5c');
+
+  linkG = g.append('g').attr('class', 'links');
+  edgeLabelG = g.append('g').attr('class', 'edge-labels');
+  nodeG = g.append('g').attr('class', 'nodes');
+  labelG = g.append('g').attr('class', 'labels');
+
+  simulation = d3.forceSimulation()
+    .force('link', d3.forceLink().id(d => d.id).distance(150).strength(0.3))
+    .force('charge', d3.forceManyBody().strength(-800).distanceMax(1200))
+    .force('center', d3.forceCenter(width / 2, height / 2).strength(0.01))
+    .force('collision', d3.forceCollide().radius(d => getNodeRadius(d) + 20))
+    .force('x', d3.forceX(width / 2).strength(0.01))
+    .force('y', d3.forceY(height / 2).strength(0.01))
+    .alphaDecay(0.02);
+
+  loadGraph();
+
+  // Auto-refresh every 10 seconds
+  setInterval(loadGraph, 10000);
+}
+
+// ─── LOAD GRAPH DATA ─────────────────────────────
+async function loadGraph() {
+  const minMentions = parseInt(document.getElementById('min-mentions').value) || 2;
+  try {
+    const resp = await fetch(`/api/graph/full?max_nodes=300&min_mentions=${minMentions}`);
+    const data = await resp.json();
+
+    // Update stats
+    document.getElementById('stat-nodes').textContent = data.stats.total_nodes || 0;
+    document.getElementById('stat-edges').textContent = data.stats.total_edges || 0;
+
+    // Count communities
+    const communities = new Set(data.nodes.map(n => n.community));
+    document.getElementById('stat-communities').textContent = communities.size;
+
+    // Avg confidence from edges
+    if (data.edges.length > 0) {
+      const avgConf = data.edges.reduce((s, e) => s + e.confidence, 0) / data.edges.length;
+      document.getElementById('stat-confidence').textContent = avgConf.toFixed(3);
+    }
+
+    // Track growth
+    if (prevNodeCount > 0 && data.stats.total_nodes > prevNodeCount) {
+      const growth = data.stats.total_nodes - prevNodeCount;
+      document.getElementById('growth-count').textContent = `+${growth} new nodes`;
+      document.getElementById('growth-count').style.color = '#10b981';
+    } else {
+      document.getElementById('growth-count').textContent = `${data.stats.total_nodes} total`;
+      document.getElementById('growth-count').style.color = '#00d4ff';
+    }
+    prevNodeCount = data.stats.total_nodes;
+
+    // Cache all data for search and timeline
+    allNodesCache = data.nodes;
+    allEdgesCache = data.edges;
+
+    // Compute time range for slider
+    const timestamps = data.nodes
+      .filter(n => n.first_seen)
+      .map(n => new Date(n.first_seen).getTime())
+      .filter(t => !isNaN(t));
+    if (timestamps.length > 1) {
+      timeRange.min = new Date(Math.min(...timestamps));
+      timeRange.max = new Date(Math.max(...timestamps));
+    }
+
+    // Apply timeline filter if slider is not at 100%
+    const sliderVal = parseInt(timeSlider.value);
+    if (sliderVal < 100 && timeRange.min && timeRange.max) {
+      timeSlider.dispatchEvent(new Event('input'));
+    } else {
+      // Filter to connected-only if checkbox is checked
+      let visNodes = data.nodes;
+      let visEdges = data.edges;
+      const connectedOnly = document.getElementById('connected-only').checked;
+      if (connectedOnly) {
+        const connectedIds = new Set();
+        visEdges.forEach(e => { connectedIds.add(e.source); connectedIds.add(e.target); });
+        visNodes = visNodes.filter(n => connectedIds.has(n.id));
+      }
+
+      updateGraph(visNodes, visEdges);
+    }
+
+    // Update stats panel
+    if (data.stats.edge_types) {
+      const bars = document.getElementById('edge-type-bars');
+      const types = Object.entries(data.stats.edge_types).sort((a,b) => b[1] - a[1]);
+      const maxCount = types.length > 0 ? types[0][1] : 1;
+      bars.innerHTML = types.map(([t, c]) => {
+        const pct = (c / maxCount * 100).toFixed(0);
+        const color = EDGE_COLORS[t] || '#4b5563';
+        return `<div style="margin:3px 0;display:flex;align-items:center;gap:6px">
+          <span style="width:100px;font-size:9px;color:${color};text-align:right;flex-shrink:0">${t.replace(/_/g,' ')}</span>
+          <div style="flex:1;background:#111827;border-radius:2px;height:12px;overflow:hidden">
+            <div style="width:${pct}%;background:${color};height:100%;border-radius:2px;transition:width 0.3s"></div>
+          </div>
+          <span style="color:#6b7c93;font-size:10px;width:24px">${c}</span>
+        </div>`;
+      }).join('');
+    }
+    if (data.stats.top_hubs) {
+      const hubs = document.getElementById('top-hubs');
+      hubs.innerHTML = data.stats.top_hubs.map(h => {
+        const color = TYPE_COLORS[h.type] || '#4b5563';
+        return `<div style="display:flex;align-items:center;gap:6px;margin:3px 0">
+          <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+          <span style="color:#c8d6e5;font-size:11px;flex:1">${h.name}</span>
+          <span style="color:#6b7c93;font-size:10px">${h.connections}</span>
+        </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    console.error('Failed to load graph:', e);
+  }
+}
+
+// ─── NODE SIZING ─────────────────────────────────
+function getNodeRadius(d) {
+  const mode = document.getElementById('size-mode').value;
+  let val;
+  if (mode === 'mentions') val = d.mentions || 1;
+  else if (mode === 'centrality') val = (d.centrality || 0) * 10000;
+  else val = (d.pagerank || 0) * 10000;
+
+  return Math.max(6, Math.min(35, 6 + Math.sqrt(val) * 3));
+}
+
+// ─── NODE COLOR ──────────────────────────────────
+function getNodeColor(d) {
+  const mode = document.getElementById('color-mode').value;
+  if (mode === 'community') return communityColor(d.community || 0);
+  if (mode === 'pagerank') {
+    const pr = (d.pagerank || 0) * 5000;
+    const t = Math.min(1, pr);
+    return d3.interpolateViridis(t);
+  }
+  return TYPE_COLORS[d.type] || TYPE_COLORS.unknown;
+}
+
+// ─── UPDATE GRAPH ────────────────────────────────
+function updateGraph(nodes, edges) {
+  // Preserve positions for existing nodes
+  const posMap = {};
+  currentNodes.forEach(n => { posMap[n.id] = { x: n.x, y: n.y, vx: n.vx, vy: n.vy }; });
+
+  nodes.forEach(n => {
+    if (posMap[n.id]) {
+      n.x = posMap[n.id].x;
+      n.y = posMap[n.id].y;
+      n.vx = posMap[n.id].vx;
+      n.vy = posMap[n.id].vy;
+    }
+  });
+
+  currentNodes = nodes;
+  currentEdges = edges;
+
+  // ── EDGES ──
+  const link = linkG.selectAll('line')
+    .data(edges, d => `${d.source}-${d.target}-${d.type}`)
+    .join(
+      enter => enter.append('line')
+        .attr('stroke', d => EDGE_COLORS[d.type] || '#1e3a5f')
+        .attr('stroke-width', d => Math.max(1, Math.min(4, (d.evidence_count || 1) * 0.8)))
+        .attr('stroke-opacity', d => 0.5 + (d.confidence || 0.5) * 0.4)
+        .attr('marker-end', 'url(#arrow)')
+        .on('mouseover', (event, d) => showEdgeTooltip(event, d))
+        .on('mouseout', hideTooltip),
+      update => update
+        .attr('stroke-opacity', d => 0.3 + (d.confidence || 0.5) * 0.5),
+      exit => exit.transition().duration(300).attr('stroke-opacity', 0).remove()
+    );
+
+  // ── EDGE LABELS ──
+  const edgeLabel = edgeLabelG.selectAll('text')
+    .data(edges, d => `${d.source}-${d.target}-${d.type}`)
+    .join(
+      enter => enter.append('text')
+        .text(d => d.type.replace(/_/g, ' '))
+        .attr('font-size', 8)
+        .attr('fill', d => EDGE_COLORS[d.type] || '#4b5563')
+        .attr('text-anchor', 'middle')
+        .attr('pointer-events', 'none')
+        .attr('opacity', 0.7),
+      update => update,
+      exit => exit.remove()
+    );
+
+  // ── NODES ──
+  const node = nodeG.selectAll('circle')
+    .data(nodes, d => d.id)
+    .join(
+      enter => enter.append('circle')
+        .attr('r', 0)
+        .attr('fill', d => getNodeColor(d))
+        .attr('stroke', '#0a0e1a')
+        .attr('stroke-width', 1.5)
+        .attr('cursor', 'pointer')
+        .call(drag(simulation))
+        .on('mouseover', (event, d) => showNodeTooltip(event, d))
+        .on('mouseout', hideTooltip)
+        .on('click', (event, d) => showNodePanel(d))
+        .transition().duration(600)
+        .attr('r', d => getNodeRadius(d)),
+      update => update
+        .transition().duration(300)
+        .attr('r', d => getNodeRadius(d))
+        .attr('fill', d => getNodeColor(d)),
+      exit => exit.transition().duration(300).attr('r', 0).remove()
+    );
+
+  // ── LABELS (show labels for nodes with edges or large nodes) ──
+  const connIds = new Set();
+  edges.forEach(e => { connIds.add(e.source.id || e.source); connIds.add(e.target.id || e.target); });
+  const label = labelG.selectAll('text')
+    .data(nodes.filter(d => getNodeRadius(d) >= 6 || connIds.has(d.id)), d => d.id)
+    .join(
+      enter => enter.append('text')
+        .text(d => d.name.length > 25 ? d.name.slice(0, 23) + '...' : d.name)
+        .attr('font-size', 11)
+        .attr('fill', '#e2e8f0')
+        .attr('text-anchor', 'middle')
+        .attr('dy', d => getNodeRadius(d) + 14)
+        .attr('pointer-events', 'none')
+        .attr('opacity', 0)
+        .transition().duration(600)
+        .attr('opacity', 0.9),
+      update => update
+        .text(d => d.name.length > 25 ? d.name.slice(0, 23) + '...' : d.name)
+        .attr('font-size', 11)
+        .attr('dy', d => getNodeRadius(d) + 14),
+      exit => exit.transition().duration(300).attr('opacity', 0).remove()
+    );
+
+  // Update simulation — use low alpha on refresh to avoid collapsing settled nodes
+  const isRefresh = currentNodes.length > 0 && Object.keys(posMap).length > 0;
+  simulation.nodes(nodes);
+  simulation.force('link').links(edges);
+  simulation.alpha(isRefresh ? 0.1 : 0.8).restart();
+
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+
+    nodeG.selectAll('circle')
+      .attr('cx', d => d.x)
+      .attr('cy', d => d.y);
+
+    labelG.selectAll('text')
+      .attr('x', d => d.x)
+      .attr('y', d => d.y);
+
+    edgeLabelG.selectAll('text')
+      .attr('x', d => ((d.source.x || 0) + (d.target.x || 0)) / 2)
+      .attr('y', d => ((d.source.y || 0) + (d.target.y || 0)) / 2 - 4);
+  });
+}
+
+// ─── DRAG ────────────────────────────────────────
+function drag(simulation) {
+  return d3.drag()
+    .on('start', (event, d) => {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x; d.fy = d.y;
+    })
+    .on('drag', (event, d) => {
+      d.fx = event.x; d.fy = event.y;
+    })
+    .on('end', (event, d) => {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null; d.fy = null;
+    });
+}
+
+// ─── TOOLTIPS ────────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+
+function showNodeTooltip(event, d) {
+  // Find connected edges
+  const connected = currentEdges.filter(e =>
+    (e.source.id || e.source) === d.id || (e.target.id || e.target) === d.id
+  );
+
+  let edgesHtml = '';
+  if (connected.length > 0) {
+    edgesHtml = '<div class="edges-list">';
+    connected.slice(0, 6).forEach(e => {
+      const other = (e.source.id || e.source) === d.id
+        ? (e.target.name || e.target.id || e.target)
+        : (e.source.name || e.source.id || e.source);
+      edgesHtml += `<div class="edge-item"><span class="rel">${e.type}</span> &rarr; ${other}</div>`;
+    });
+    if (connected.length > 6) edgesHtml += `<div class="edge-item">... +${connected.length - 6} more</div>`;
+    edgesHtml += '</div>';
+  }
+
+  tooltip.innerHTML = `
+    <h3>${d.name}</h3>
+    <div class="meta">Type: <b>${d.type}</b></div>
+    <div class="meta">Mentions: <b>${d.mentions}</b> | PageRank: <b>${d.pagerank.toFixed(4)}</b></div>
+    <div class="meta">Community: <b>${d.community}</b> | Connections: <b>${connected.length}</b></div>
+    ${edgesHtml}
+  `;
+  tooltip.style.left = (event.pageX + 15) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  tooltip.classList.add('visible');
+
+  // Highlight connected nodes
+  const connectedIds = new Set([d.id]);
+  connected.forEach(e => {
+    connectedIds.add(e.source.id || e.source);
+    connectedIds.add(e.target.id || e.target);
+  });
+  nodeG.selectAll('circle')
+    .attr('opacity', n => connectedIds.has(n.id) ? 1 : 0.15);
+  linkG.selectAll('line')
+    .attr('stroke-opacity', e =>
+      (e.source.id || e.source) === d.id || (e.target.id || e.target) === d.id ? 0.9 : 0.05
+    );
+  labelG.selectAll('text')
+    .attr('opacity', n => connectedIds.has(n.id) ? 1 : 0.1);
+}
+
+function showEdgeTooltip(event, d) {
+  const src = d.source.name || d.source;
+  const tgt = d.target.name || d.target;
+  tooltip.innerHTML = `
+    <h3>${d.type}</h3>
+    <div class="meta">${src} &rarr; ${tgt}</div>
+    <div class="meta">Weight: <b>${d.weight}</b> | Confidence: <b>${(d.confidence * 100).toFixed(0)}%</b></div>
+    <div class="meta">Evidence: <b>${d.evidence_count}</b> sources</div>
+    <div class="meta">First seen: <b>${d.first_seen ? d.first_seen.slice(0, 10) : '?'}</b></div>
+  `;
+  tooltip.style.left = (event.pageX + 15) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  tooltip.classList.add('visible');
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+  // Reset opacity
+  nodeG.selectAll('circle').attr('opacity', 1);
+  linkG.selectAll('line').attr('stroke-opacity', d => 0.5 + (d.confidence || 0.5) * 0.4);
+  labelG.selectAll('text').attr('opacity', 0.9);
+  edgeLabelG.selectAll('text').attr('opacity', 0.7);
+}
+
+// ─── NODE DETAIL PANEL ───────────────────────────
+async function showNodePanel(d) {
+  const panel = document.getElementById('info-panel');
+  const content = document.getElementById('panel-content');
+
+  // Find connected edges
+  const connected = currentEdges.filter(e =>
+    (e.source.id || e.source) === d.id || (e.target.id || e.target) === d.id
+  );
+
+  let edgesHtml = connected.map(e => {
+    const isSource = (e.source.id || e.source) === d.id;
+    const other = isSource
+      ? (e.target.name || e.target.id || e.target)
+      : (e.source.name || e.source.id || e.source);
+    const dir = isSource ? '&rarr;' : '&larr;';
+    return `<div class="edge-list-item">
+      <span class="reltype">${e.type}</span> ${dir} <span class="target">${other}</span>
+      <span class="conf">(${(e.confidence * 100).toFixed(0)}% conf, ${e.evidence_count} sources)</span>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <h2>${d.name}</h2>
+    <div class="section">
+      <h4>Identity</h4>
+      <div class="kv"><span class="label">Type</span><span class="value">${d.type}</span></div>
+      <div class="kv"><span class="label">ID</span><span class="value" style="font-size:10px">${d.id}</span></div>
+      <div class="kv"><span class="label">Community</span><span class="value">${d.community}</span></div>
+    </div>
+    <div class="section">
+      <h4>Metrics</h4>
+      <div class="kv"><span class="label">Mentions</span><span class="value">${d.mentions}</span></div>
+      <div class="kv"><span class="label">PageRank</span><span class="value">${d.pagerank.toFixed(6)}</span></div>
+      <div class="kv"><span class="label">Centrality</span><span class="value">${d.centrality.toFixed(6)}</span></div>
+      <div class="kv"><span class="label">Connections</span><span class="value">${connected.length}</span></div>
+    </div>
+    <div class="section">
+      <h4>Timeline</h4>
+      <div class="kv"><span class="label">First seen</span><span class="value">${d.first_seen ? d.first_seen.slice(0, 16) : '?'}</span></div>
+      <div class="kv"><span class="label">Last seen</span><span class="value">${d.last_seen ? d.last_seen.slice(0, 16) : '?'}</span></div>
+    </div>
+    <div class="section">
+      <h4>Relationships (${connected.length})</h4>
+      ${edgesHtml || '<div style="color:#6b7c93">No relationships yet</div>'}
+    </div>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('info-panel').classList.remove('open');
+}
+
+function recenter() {
+  // Zoom to fit all nodes
+  if (currentNodes.length === 0) return;
+  const xs = currentNodes.map(n => n.x || 0);
+  const ys = currentNodes.map(n => n.y || 0);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const padding = 60;
+  const dx = (maxX - minX) + padding * 2;
+  const dy = (maxY - minY) + padding * 2;
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const scale = Math.min(0.9, Math.min(width / dx, height / dy));
+  const tx = width / 2 - cx * scale;
+  const ty = height / 2 - cy * scale;
+
+  svg.transition().duration(750).call(
+    d3.zoom().transform,
+    d3.zoomIdentity.translate(tx, ty).scale(scale)
+  );
+}
+
+// ─── Re-render on control changes ────────────────
+document.getElementById('color-mode').addEventListener('change', () => {
+  nodeG.selectAll('circle').transition().duration(300).attr('fill', d => getNodeColor(d));
+});
+document.getElementById('size-mode').addEventListener('change', () => {
+  nodeG.selectAll('circle').transition().duration(300).attr('r', d => getNodeRadius(d));
+  labelG.selectAll('text')
+    .attr('font-size', d => Math.max(8, Math.min(13, getNodeRadius(d) * 0.8)))
+    .attr('dy', d => getNodeRadius(d) + 14);
+  simulation.force('collision', d3.forceCollide().radius(d => getNodeRadius(d) + 4));
+  simulation.alpha(0.3).restart();
+});
+
+// ─── SEARCH ─────────────────────────────────────
+const searchBox = document.getElementById('search-box');
+const searchResults = document.getElementById('search-results');
+
+searchBox.addEventListener('input', () => {
+  const q = searchBox.value.trim().toLowerCase();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+
+  const matches = allNodesCache.filter(n => n.name.toLowerCase().includes(q)).slice(0, 10);
+  if (matches.length === 0) { searchResults.style.display = 'none'; return; }
+
+  searchResults.innerHTML = matches.map(n => {
+    const color = TYPE_COLORS[n.type] || '#4b5563';
+    return `<div class="search-result" data-id="${n.id}">
+      <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
+      <span style="color:#c8d6e5">${n.name}</span>
+      <span class="sr-type">${n.type} &middot; ${n.mentions} mentions</span>
+    </div>`;
+  }).join('');
+  searchResults.style.display = 'block';
+});
+
+searchResults.addEventListener('click', (e) => {
+  const item = e.target.closest('.search-result');
+  if (!item) return;
+  const id = item.dataset.id;
+  const node = currentNodes.find(n => n.id === id);
+  if (node && node.x != null) {
+    // Zoom to this node
+    const scale = 1.5;
+    const tx = width / 2 - node.x * scale;
+    const ty = height / 2 - node.y * scale;
+    svg.transition().duration(750).call(
+      d3.zoom().transform,
+      d3.zoomIdentity.translate(tx, ty).scale(scale)
+    );
+    // Highlight it
+    nodeG.selectAll('circle')
+      .attr('opacity', n => n.id === id ? 1 : 0.15)
+      .attr('stroke', n => n.id === id ? '#00d4ff' : '#0a0e1a')
+      .attr('stroke-width', n => n.id === id ? 3 : 1.5);
+    setTimeout(() => {
+      nodeG.selectAll('circle').attr('opacity', 1).attr('stroke', '#0a0e1a').attr('stroke-width', 1.5);
+    }, 3000);
+  }
+  searchResults.style.display = 'none';
+  searchBox.value = '';
+});
+
+document.addEventListener('click', (e) => {
+  if (!searchResults.contains(e.target) && e.target !== searchBox) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// ─── TIMELINE SLIDER ────────────────────────────
+let allNodesCache = [];
+let allEdgesCache = [];
+let timeRange = { min: null, max: null };
+
+const timeSlider = document.getElementById('time-slider');
+const timeLabel = document.getElementById('time-label');
+
+timeSlider.addEventListener('input', () => {
+  if (!timeRange.min || !timeRange.max) return;
+  const pct = parseInt(timeSlider.value);
+  if (pct >= 100) {
+    timeLabel.textContent = 'All time';
+    applyFilters(allNodesCache, allEdgesCache);
+    return;
+  }
+  const range = timeRange.max - timeRange.min;
+  const cutoff = new Date(timeRange.min.getTime() + range * (pct / 100));
+  timeLabel.textContent = cutoff.toISOString().slice(0, 16).replace('T', ' ');
+
+  const filteredNodes = allNodesCache.filter(n => {
+    if (!n.first_seen) return true;
+    return new Date(n.first_seen) <= cutoff;
+  });
+  const nodeIds = new Set(filteredNodes.map(n => n.id));
+  const filteredEdges = allEdgesCache.filter(e => {
+    const sid = e.source.id || e.source;
+    const tid = e.target.id || e.target;
+    return nodeIds.has(sid) && nodeIds.has(tid);
+  });
+
+  applyFilters(filteredNodes, filteredEdges);
+});
+
+function applyFilters(nodes, edges) {
+  let visNodes = nodes;
+  let visEdges = edges;
+  const connectedOnly = document.getElementById('connected-only').checked;
+  if (connectedOnly) {
+    const connectedIds = new Set();
+    visEdges.forEach(e => { connectedIds.add(e.source.id || e.source); connectedIds.add(e.target.id || e.target); });
+    visNodes = visNodes.filter(n => connectedIds.has(n.id));
+  }
+  updateGraph(visNodes, visEdges);
+}
+
+// ─── BOOT ────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENTINEL — Intelligence Command Center</title>
+<style>
+/* ─── RESET & BASE ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-primary: #06060b;
+  --bg-secondary: #0c0c14;
+  --bg-card: #10101a;
+  --bg-card-hover: #141420;
+  --border: #1a1a2e;
+  --border-accent: #2a2a4a;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a8;
+  --text-muted: #555570;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-purple: #8b5cf6;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-rose: #f43f5e;
+  --glow-blue: 0 0 20px rgba(59, 130, 246, 0.15);
+  --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.15);
+  --glow-green: 0 0 20px rgba(16, 185, 129, 0.15);
+  --glow-red: 0 0 20px rgba(239, 68, 68, 0.2);
+  --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+html { font-size: 14px; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── HEADER ───────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.logo {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue), var(--accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.header-right { display: flex; align-items: center; gap: 20px; }
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+.status-dot.live {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+  animation: pulse 2s ease-in-out infinite;
+}
+.status-dot.offline { background: var(--accent-red); }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.header-stat {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.header-stat strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ─── KPI BAR ──────────────────────────────────────────── */
+.kpi-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.kpi {
+  background: var(--bg-secondary);
+  padding: 16px 20px;
+  text-align: center;
+  transition: background 0.2s;
+}
+.kpi:hover { background: var(--bg-card-hover); }
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.kpi-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+}
+.kpi-value.blue { color: var(--accent-blue); }
+.kpi-value.cyan { color: var(--accent-cyan); }
+.kpi-value.green { color: var(--accent-green); }
+.kpi-value.purple { color: var(--accent-purple); }
+.kpi-value.amber { color: var(--accent-amber); }
+.kpi-value.red { color: var(--accent-red); }
+
+/* ─── MAIN GRID ────────────────────────────────────────── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 340px;
+  grid-template-rows: auto auto;
+  gap: 1px;
+  background: var(--border);
+  min-height: calc(100vh - 130px);
+}
+
+/* ─── CARD ─────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  padding: 16px 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.card-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.card-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-blue);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+.card-body {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-accent) transparent;
+}
+.card-body::-webkit-scrollbar { width: 4px; }
+.card-body::-webkit-scrollbar-track { background: transparent; }
+.card-body::-webkit-scrollbar-thumb { background: var(--border-accent); border-radius: 2px; }
+
+/* ─── SIGNAL FEED ──────────────────────────────────────── */
+.signal-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+}
+.signal-item:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-accent);
+}
+.signal-item.new {
+  animation: slideIn 0.5s ease-out;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.signal-priority {
+  width: 4px;
+  min-height: 36px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.signal-priority.critical { background: var(--accent-red); box-shadow: var(--glow-red); }
+.signal-priority.high { background: var(--accent-amber); }
+.signal-priority.medium { background: var(--accent-blue); }
+.signal-priority.low { background: var(--text-muted); }
+.signal-content { flex: 1; min-width: 0; }
+.signal-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.signal-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.signal-type {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.signal-type.anomaly { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+.signal-type.burst { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+.signal-type.cascade { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
+.signal-confidence {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+/* ─── LIVE CRAWL FEED ──────────────────────────────────── */
+.crawl-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  transition: background 0.15s;
+}
+.crawl-item:hover { background: var(--bg-card-hover); }
+.crawl-status {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.crawl-status.completed { background: var(--accent-green); }
+.crawl-status.pending { background: var(--accent-blue); }
+.crawl-status.failed { background: var(--accent-red); }
+.crawl-status.in_progress { background: var(--accent-amber); animation: pulse 1s infinite; }
+.crawl-url {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+.crawl-domain {
+  color: var(--accent-cyan);
+  margin-right: 2px;
+}
+.crawl-time {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+/* ─── ENTITY LIST ──────────────────────────────────────── */
+.entity-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  transition: background 0.15s;
+}
+.entity-item:hover { background: var(--bg-card-hover); }
+.entity-rank {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.entity-name {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.entity-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+.entity-bar {
+  width: 60px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.entity-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* ─── SOURCE STATUS ────────────────────────────────────── */
+.source-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+.source-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+.source-info { flex: 1; }
+.source-name { font-size: 0.8rem; font-weight: 500; }
+.source-detail {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.source-status {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.source-status.active { background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+.source-status.idle { background: var(--accent-amber); }
+
+/* ─── DOMAIN MAP ───────────────────────────────────────── */
+.domain-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  margin-bottom: 2px;
+}
+.domain-name {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.domain-count {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.domain-bar {
+  width: 50px; height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.domain-bar-fill {
+  height: 100%;
+  background: var(--accent-purple);
+  border-radius: 2px;
+  transition: width 0.5s;
+}
+
+/* ─── DETECTION PANEL ──────────────────────────────────── */
+.detection-item {
+  padding: 8px 10px;
+  border-left: 2px solid var(--border-accent);
+  margin-bottom: 6px;
+  margin-left: 4px;
+  transition: border-color 0.2s;
+}
+.detection-item:hover { border-color: var(--accent-cyan); }
+.detection-entity {
+  font-weight: 600;
+  font-size: 0.82rem;
+  margin-bottom: 2px;
+}
+.detection-detail {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.detection-value {
+  color: var(--accent-amber);
+  font-weight: 600;
+}
+
+/* ─── EMPTY STATE ──────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 120px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  gap: 8px;
+}
+.empty-icon { font-size: 1.8rem; opacity: 0.3; }
+
+/* ─── RESPONSIVE ───────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .main-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-bar { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .kpi-bar { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ─────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">SENTINEL</div>
+      <div class="logo-sub">Intelligence Command Center</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-stat">
+      <span class="status-dot live" id="ws-status"></span>
+      <span id="conn-label">CONNECTING</span>
+    </div>
+    <div class="header-stat">UPTIME <strong id="uptime">--:--:--</strong></div>
+    <div class="header-stat">PID <strong id="pid">-</strong></div>
+    <div class="header-stat" id="clock" style="color:var(--text-muted); font-family:var(--font-mono); font-size:0.75rem;"></div>
+  </div>
+</div>
+
+<!-- ─── KPI BAR ────────────────────────────────────────── -->
+<div class="kpi-bar">
+  <div class="kpi">
+    <div class="kpi-value cyan" id="kpi-total-urls">-</div>
+    <div class="kpi-label">Total URLs</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value green" id="kpi-completed">-</div>
+    <div class="kpi-label">Crawled</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value blue" id="kpi-pending">-</div>
+    <div class="kpi-label">In Queue</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value purple" id="kpi-domains">-</div>
+    <div class="kpi-label">Domains</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value amber" id="kpi-signals">-</div>
+    <div class="kpi-label">Signals</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value red" id="kpi-entities">-</div>
+    <div class="kpi-label">Entities</div>
+  </div>
+</div>
+
+<!-- ─── MAIN GRID ──────────────────────────────────────── -->
+<div class="main-grid">
+
+  <!-- SIGNALS FEED -->
+  <div class="card" style="grid-row: span 2;">
+    <div class="card-header">
+      <span class="card-title">Signal Feed</span>
+      <span class="card-badge" id="signal-count">0 signals</span>
+    </div>
+    <div class="card-body" id="signals-feed">
+      <div class="empty-state">
+        <div class="empty-icon">&#x1F4E1;</div>
+        <div>Waiting for signal detections...</div>
+        <div style="font-size:0.7rem;">Signals appear after enough data is collected</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE CRAWL ACTIVITY -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Live Crawl Activity</span>
+      <span class="card-badge" id="crawl-badge">live</span>
+    </div>
+    <div class="card-body" id="crawl-feed"></div>
+  </div>
+
+  <!-- SOURCES -->
+  <div class="card" style="grid-row: span 2;">
+    <div class="card-header">
+      <span class="card-title">Intelligence Sources</span>
+      <span class="card-badge" id="source-count">10 active</span>
+    </div>
+    <div class="card-body" id="sources-panel"></div>
+
+    <div class="card-header" style="margin-top:16px;">
+      <span class="card-title">System Resources</span>
+    </div>
+    <div id="system-panel" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-secondary); padding: 0 10px;">
+      <div style="margin-bottom:4px;">CPU: <span id="sys-cpu" style="color:var(--text-primary);">-</span></div>
+      <div style="margin-bottom:4px;">RAM: <span id="sys-ram" style="color:var(--text-primary);">-</span></div>
+      <div style="margin-bottom:4px;">Redis: <span id="sys-redis" style="color:var(--text-primary);">-</span></div>
+      <div style="margin-bottom:4px;">Graph: <span id="sys-graph" style="color:var(--accent-purple);">-</span></div>
+      <div style="margin-bottom:4px;">Vectors: <span id="sys-lance" style="color:var(--accent-cyan);">-</span></div>
+      <div>LLM: <span style="color:var(--accent-cyan);">qwen3.5:27b</span></div>
+    </div>
+  </div>
+
+  <!-- ENTITIES + DETECTIONS -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Top Entities</span>
+      <span class="card-badge" id="entity-badge">by mentions</span>
+    </div>
+    <div class="card-body" id="entities-panel">
+      <div class="empty-state">
+        <div class="empty-icon">&#x1F310;</div>
+        <div>Entities appear after extraction runs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: DOMAINS + DETECTIONS -->
+  <!--
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Top Domains</span>
+    </div>
+    <div class="card-body" id="domains-panel"></div>
+  </div>
+  -->
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────
+let ws = null;
+let reconnectTimer = null;
+let prevSignalIds = new Set();
+
+// ─── FORMATTERS ───────────────────────────────────────
+function fmt(n) {
+  if (n === null || n === undefined || n === '-') return '-';
+  n = Number(n);
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+function fmtUptime(s) {
+  if (!s) return '--:--:--';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function fmtAgo(seconds) {
+  if (!seconds || seconds < 0) return 'just now';
+  if (seconds < 60) return Math.round(seconds) + 's ago';
+  if (seconds < 3600) return Math.round(seconds / 60) + 'm ago';
+  return Math.round(seconds / 3600) + 'h ago';
+}
+
+function extractDomain(url) {
+  try {
+    return new URL(url).hostname.replace('www.', '');
+  } catch { return url; }
+}
+
+function fmtInterval(s) {
+  if (s === 0) return 'continuous';
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.round(s / 60) + 'min';
+  return Math.round(s / 3600) + 'hr';
+}
+
+// ─── RENDERERS ────────────────────────────────────────
+
+function renderKPIs(data) {
+  const f = data.frontier || {};
+  document.getElementById('kpi-total-urls').textContent = fmt(f.total);
+  document.getElementById('kpi-completed').textContent = fmt(f.completed);
+  document.getElementById('kpi-pending').textContent = fmt(f.pending);
+  document.getElementById('kpi-domains').textContent = fmt(f.unique_domains);
+  document.getElementById('kpi-signals').textContent = fmt((data.signals || []).length);
+  const graphStats = data.graph || {};
+  const entityCount = graphStats.node_count || (data.top_entities || []).length;
+  document.getElementById('kpi-entities').textContent = fmt(entityCount);
+  document.getElementById('uptime').textContent = fmtUptime(data.uptime_seconds);
+}
+
+function renderSignals(signals) {
+  const container = document.getElementById('signals-feed');
+  if (!signals || signals.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#x1F4E1;</div>
+        <div>Waiting for signal detections...</div>
+        <div style="font-size:0.7rem;">Signals appear after enough data is collected</div>
+      </div>`;
+    document.getElementById('signal-count').textContent = '0 signals';
+    return;
+  }
+
+  document.getElementById('signal-count').textContent = signals.length + ' signals';
+  const newIds = new Set(signals.map(s => s.signal_id));
+
+  container.innerHTML = signals.map(s => {
+    const isNew = !prevSignalIds.has(s.signal_id);
+    const priority = (s.priority || 'medium').toLowerCase();
+    const type = (s.signal_type || 'unknown').toLowerCase();
+    const conf = s.confidence ? Math.round(s.confidence * 100) + '%' : '-';
+    return `
+      <div class="signal-item ${isNew ? 'new' : ''}">
+        <div class="signal-priority ${priority}"></div>
+        <div class="signal-content">
+          <div class="signal-title">${escHtml(s.title || 'Untitled Signal')}</div>
+          <div class="signal-meta">
+            <span class="signal-type ${type}">${type}</span>
+            <span class="signal-confidence">${conf}</span>
+            <span>${priority.toUpperCase()}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  prevSignalIds = newIds;
+}
+
+function renderCrawls(crawls) {
+  const container = document.getElementById('crawl-feed');
+  if (!crawls || crawls.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#x1F578;</div>
+        <div>Crawler starting up...</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = crawls.map(c => {
+    const status = (c.status || 'pending').toLowerCase();
+    const domain = c.domain || extractDomain(c.url || '');
+    const path = (c.url || '').replace(/^https?:\/\/[^/]+/, '');
+    return `
+      <div class="crawl-item">
+        <div class="crawl-status ${status}"></div>
+        <div class="crawl-url">
+          <span class="crawl-domain">${escHtml(domain)}</span>${escHtml(path.substring(0, 60))}
+        </div>
+        <div class="crawl-time">${fmtAgo(c.seconds_ago)}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderEntities(entities, graphData) {
+  const container = document.getElementById('entities-panel');
+
+  // Prefer graph nodes if DuckDB entity_mention_ts is empty
+  let items = entities;
+  if ((!items || items.length === 0) && graphData && graphData.top_nodes && graphData.top_nodes.length > 0) {
+    items = graphData.top_nodes.map(n => ({
+      entity_name: n.name,
+      total_mentions: n.mentions || 1,
+      entity_type: n.type,
+    }));
+  }
+
+  if (!items || items.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#x1F310;</div>
+        <div>Entities appear after extraction runs</div>
+      </div>`;
+    return;
+  }
+
+  const maxMentions = Math.max(...items.map(e => e.total_mentions || 0), 1);
+  const typeColors = {
+    organization: 'var(--accent-blue)', person: 'var(--accent-purple)',
+    location: 'var(--accent-green)', product: 'var(--accent-cyan)',
+    funding_round: 'var(--accent-amber)', event: 'var(--accent-rose)',
+    concept: 'var(--text-secondary)', regulation: 'var(--accent-red)',
+  };
+
+  container.innerHTML = items.map((e, i) => {
+    const pct = Math.round(((e.total_mentions || 0) / maxMentions) * 100);
+    const typeColor = typeColors[(e.entity_type || '').toLowerCase()] || 'var(--accent-blue)';
+    return `
+      <div class="entity-item">
+        <div class="entity-rank">${i + 1}</div>
+        <div class="entity-name">${escHtml(e.entity_name || '-')}${e.entity_type ? ' <span style="color:' + typeColor + ';font-size:0.65rem;opacity:0.8">' + e.entity_type.toUpperCase() + '</span>' : ''}</div>
+        <div class="entity-count">${fmt(e.total_mentions)}</div>
+        <div class="entity-bar"><div class="entity-bar-fill" style="width:${pct}%;background:${typeColor}"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function renderSources(sources) {
+  const container = document.getElementById('sources-panel');
+  const icons = {
+    hackernews: 'Y', github: '&#x2B24;', arxiv: '&#x03B1;', rss: '&#x25C9;',
+    ct_monitor: '&#x1F512;', patents: '&#x1F4DC;', commoncrawl: '&#x1F310;',
+    sitemap: '&#x1F5FA;', web_crawler: '&#x1F578;', reddit: 'R',
+  };
+  const labels = {
+    hackernews: 'Hacker News', github: 'GitHub', arxiv: 'arXiv', rss: 'RSS Feeds',
+    ct_monitor: 'CT Monitor', patents: 'Patents', commoncrawl: 'Common Crawl',
+    sitemap: 'Sitemap Engine', web_crawler: 'Web Crawler', reddit: 'Reddit',
+  };
+
+  if (!sources) return;
+  container.innerHTML = Object.entries(sources).map(([name, s]) => {
+    return `
+      <div class="source-item">
+        <div class="source-icon">${icons[name] || '?'}</div>
+        <div class="source-info">
+          <div class="source-name">${labels[name] || name}</div>
+          <div class="source-detail">${s.interval ? fmtInterval(s.interval) : 'continuous'}</div>
+        </div>
+        <div class="source-status ${s.enabled ? 'active' : 'idle'}"></div>
+      </div>`;
+  }).join('');
+}
+
+function renderSystem(data) {
+  const sys = data.system || {};
+  const redis = data.redis || {};
+  const graph = data.graph || {};
+  const lance = data.lancedb || {};
+  document.getElementById('sys-cpu').textContent = (sys.cpu_percent || 0) + '%';
+  document.getElementById('sys-ram').textContent = (sys.memory_mb || 0) + ' MB';
+  document.getElementById('sys-redis').textContent = redis.connected
+    ? (redis.used_memory_mb || 0) + ' MB'
+    : 'offline';
+  // Graph + vector store stats (add to system panel if elements exist)
+  const graphEl = document.getElementById('sys-graph');
+  if (graphEl) graphEl.textContent = (graph.node_count || 0) + ' nodes / ' + (graph.edge_count || 0) + ' edges';
+  const lanceEl = document.getElementById('sys-lance');
+  if (lanceEl) {
+    const total = Object.values(lance).reduce((a, b) => a + (b || 0), 0);
+    lanceEl.textContent = total + ' vectors';
+  }
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ─── CLOCK ────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-US', { hour12: false }) + ' UTC' +
+    (now.getTimezoneOffset() > 0 ? '-' : '+') +
+    Math.abs(now.getTimezoneOffset() / 60);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── INITIAL FETCH ───────────────────────────────────
+// Load data immediately via REST, don't wait for WebSocket
+fetch('/api/system-snapshot')
+  .then(r => r.json())
+  .then(data => {
+    renderKPIs(data);
+    renderSignals(data.signals);
+    renderCrawls(data.recent_crawls);
+    renderEntities(data.top_entities, data.graph);
+    renderSources(data.sources);
+    renderSystem(data);
+  })
+  .catch(e => console.warn('Initial fetch failed:', e));
+
+// ─── WEBSOCKET ────────────────────────────────────────
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws/live`);
+
+  ws.onopen = () => {
+    document.getElementById('ws-status').className = 'status-dot live';
+    document.getElementById('conn-label').textContent = 'LIVE';
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      renderKPIs(data);
+      renderSignals(data.signals);
+      renderCrawls(data.recent_crawls);
+      renderEntities(data.top_entities, data.graph);
+      renderSources(data.sources);
+      renderSystem(data);
+    } catch (e) {
+      console.error('Parse error:', e);
+    }
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ws-status').className = 'status-dot offline';
+    document.getElementById('conn-label').textContent = 'RECONNECTING';
+    reconnectTimer = setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+connect();
+</script>
+</body>
+</html>

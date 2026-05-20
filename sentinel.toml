@@ -1,0 +1,319 @@
+[system]
+name = "sentinel"
+version = "1.0.0"
+log_level = "INFO"
+data_dir = "./data"
+max_workers = 8
+timezone = "Europe/Berlin"
+
+[redis]
+url = "redis://localhost:6379/0"
+max_connections = 20
+stream_max_len = 100000
+
+[neo4j]
+uri = "bolt://localhost:7687"
+user = "neo4j"
+password = "sentinel_secure_password"
+database = "sentinel"
+max_connection_pool_size = 50
+
+[lancedb]
+path = "./data/lance"
+embedding_dim = 384
+
+[duckdb]
+path = "./data/duckdb/sentinel.duckdb"
+memory_limit = "4GB"
+threads = 4
+
+[sqlite]
+crawl_state_path = "./data/crawl_state/frontier.db"
+wal_mode = true
+
+# ─── INGESTION CONFIGURATION ───────────────────────────────────
+
+[ingestion]
+default_crawl_delay = 2.0
+max_concurrent_domains = 50
+max_page_size_bytes = 10485760
+request_timeout = 30
+user_agent = "SentinelBot/1.0 (research; +https://yoursite.com/bot)"
+
+[ingestion.frontier]
+max_size = 10000000
+priority_decay = 0.95
+min_revisit_hours = 24
+max_revisit_hours = 720
+max_depth = 5
+
+[ingestion.sources.hackernews]
+enabled = true
+poll_interval_seconds = 120
+min_score_threshold = 5
+categories = ["new", "top", "best"]
+
+[ingestion.sources.github]
+enabled = true
+poll_interval_seconds = 300
+token = ""
+track_events = ["CreateEvent", "PublicEvent", "ReleaseEvent", "WatchEvent"]
+trending_languages = ["python", "rust", "typescript", "go"]
+trending_since = "daily"
+
+[ingestion.sources.arxiv]
+enabled = true
+poll_interval_seconds = 3600
+categories = ["cs.AI", "cs.LG", "cs.CL", "cs.CR", "cs.SE", "econ.GN", "q-fin.GN"]
+max_results_per_query = 100
+
+[ingestion.sources.patents]
+enabled = true
+poll_interval_seconds = 43200  # Every 12 hours
+jurisdictions = ["US", "EP", "WO", "CN", "JP", "KR"]
+cpc_codes = [
+    "G06N",  # AI, Machine Learning, Neural Networks
+    "G06F",  # Computing & Data Processing
+    "G06V",  # Computer Vision & Image Recognition
+    "G06Q",  # Business Methods & Fintech
+    "G06T",  # Image Data Processing & 3D
+    "H04L",  # Telecommunications & Networking
+    "H04W",  # Wireless Communication
+    "G16H",  # Healthcare Informatics
+    "G16B",  # Bioinformatics
+    "Y02E",  # Clean Energy Technologies
+    "H01L",  # Semiconductor Devices
+    "H02J",  # Power Distribution & Battery Systems
+    "B25J",  # Robotics & Manipulators
+    "A61B",  # Medical Diagnostics
+    "G01N",  # Material Analysis & Sensors
+]
+
+[ingestion.sources.sec_edgar]
+enabled = true
+poll_interval_seconds = 3600
+form_types = ["8-K", "10-K", "10-Q", "S-1", "DEF 14A"]
+keywords = []
+
+[ingestion.sources.reddit]
+enabled = true
+poll_interval_seconds = 300
+subreddits = [
+    "technology", "artificial", "MachineLearning", "cryptocurrency",
+    "startups", "SaaS", "biotech", "energy", "robotics",
+    "singularity", "Futurology", "science", "nanotech",
+    "QuantumComputing", "spacex", "longevity", "climatechange",
+    "selfhosted", "LocalLLaMA", "webdev", "golang", "rust"
+]
+min_score = 10
+client_id = ""
+client_secret = ""
+
+[ingestion.sources.twitter]
+enabled = false
+bearer_token = ""
+poll_interval_seconds = 900
+tracked_accounts = []
+search_queries = []
+
+[ingestion.sources.rss]
+enabled = true
+poll_interval_seconds = 1800
+feeds = []
+
+[ingestion.sources.web_crawler]
+enabled = true
+seed_urls = []
+max_pages_per_domain = 1000
+respect_robots_txt = true
+follow_redirects = true
+max_redirects = 5
+
+[ingestion.sources.product_hunt]
+enabled = true
+poll_interval_seconds = 3600
+min_votes = 50
+
+[ingestion.sources.crunchbase]
+enabled = false
+api_key = ""
+poll_interval_seconds = 86400
+
+[ingestion.sources.commoncrawl]
+enabled = true
+poll_interval_seconds = 7200  # Every 2 hours
+domains = []  # Empty = use built-in HIGH_VALUE_DOMAINS list
+domains_per_cycle = 10
+max_pages_per_domain = 50
+
+[ingestion.sources.sitemap]
+enabled = true
+poll_interval_seconds = 3600  # Every hour
+domains_per_cycle = 20
+max_urls_per_domain = 500
+
+# ─── STEALTH CONFIGURATION ─────────────────────────────────────
+
+[stealth]
+enabled = true
+browser_engine = "camoufox"
+headless = true
+max_browser_instances = 4
+browser_restart_after = 100
+rotate_fingerprint_every = 50
+
+[stealth.proxy]
+enabled = false
+cascade_strategy = "escalate"
+datacenter_proxies = []
+residential_proxies = []
+mobile_proxies = []
+max_failures_before_escalate = 3
+cooldown_after_block_seconds = 300
+
+[stealth.rate_limiting]
+default_requests_per_minute = 20
+aggressive_domains = {}
+backoff_on_429 = true
+backoff_multiplier = 2.0
+max_backoff_seconds = 3600
+
+# ─── EXTRACTION CONFIGURATION ──────────────────────────────────
+
+[extraction]
+llm_backend = "ollama"
+llm_model = "qwen2.5:3b"
+llm_base_url = "http://localhost:11434"
+llm_temperature = 0.1
+llm_max_tokens = 2048
+llm_timeout_seconds = 120
+batch_size = 10
+
+[extraction.embedding]
+model = "all-MiniLM-L6-v2"
+device = "mps"
+batch_size = 256
+normalize = true
+
+[extraction.ner]
+backend = "spacy"
+spacy_model = "en_core_web_trf"
+entity_types = ["ORG", "PRODUCT", "PERSON", "GPE", "TECH", "EVENT", "MONEY"]
+
+[extraction.dedup]
+minhash_num_perm = 128
+minhash_threshold = 0.5
+semantic_threshold = 0.92
+shingle_size = 5
+
+[extraction.relevance]
+min_score = 0.3
+topic_embeddings_path = "./data/models/topic_embeddings.npy"
+
+[extraction.dom_pruning]
+enabled = true
+remove_nav = true
+remove_footer = true
+remove_sidebar = true
+remove_ads = true
+remove_scripts = true
+remove_styles = true
+max_text_length = 50000
+
+# ─── KNOWLEDGE GRAPH CONFIGURATION ─────────────────────────────
+
+[knowledge]
+entity_resolution_threshold = 0.85
+relationship_extraction_backend = "llm"
+community_detection_resolution = 1.0
+community_detection_interval_hours = 24
+max_relationships_per_extraction = 20
+graph_embedding_dim = 128
+graph_embedding_algorithm = "node2vec"
+node2vec_walk_length = 80
+node2vec_num_walks = 10
+
+# ─── SIGNAL DETECTION CONFIGURATION ────────────────────────────
+
+[signals]
+anomaly_window_size = 24
+anomaly_threshold_sigma = 3.0
+burst_detection_s = 2.0
+burst_detection_gamma = 1.0
+cross_correlation_max_lag_hours = 720
+cross_correlation_min_significance = 0.05
+cascade_min_sources = 2
+cascade_max_window_hours = 2160
+novelty_k_neighbors = 10
+novelty_threshold = 0.7
+
+[signals.time_series]
+aggregation_interval_hours = 1
+min_data_points = 48
+prophet_changepoint_prior = 0.05
+prophet_seasonality_prior = 10.0
+
+[signals.sentiment]
+backend = "local_llm"
+update_interval_hours = 6
+
+# ─── INTELLIGENCE CONFIGURATION ────────────────────────────────
+
+[intelligence]
+optimization_cycle_hours = 24
+max_experiments_per_cycle = 10
+exploration_rate = 0.15
+bandit_algorithm = "ucb1"
+reward_decay = 0.99
+strategy_llm_model = "qwen2.5:3b"
+strategy_llm_temperature = 0.7
+
+[intelligence.red_team]
+llm_backend = "anthropic"              # Use Claude API for adversarial challenges
+llm_model = "claude-haiku-4-5-20251001"
+api_key = "sk-ant-..."                 # Get from console.anthropic.com
+
+[intelligence.semantic_diff]
+enabled = true
+check_interval_hours = 24
+min_embedding_drift = 0.15
+tracked_url_patterns = []
+
+# ─── INTERFACE CONFIGURATION ───────────────────────────────────
+
+[interface]
+api_host = "0.0.0.0"
+api_port = 8000
+api_workers = 2
+enable_cors = true
+cors_origins = ["http://localhost:3000"]
+
+[interface.alerts]
+enabled = true
+channels = ["desktop", "email"]
+min_priority = "medium"
+digest_interval_hours = 6
+desktop_sound = true
+max_alerts_per_hour = 10
+
+[interface.alerts.email]
+smtp_host = ""
+smtp_port = 587
+smtp_user = ""
+smtp_password = ""
+from_address = ""
+to_addresses = []
+
+[interface.alerts.slack]
+webhook_url = ""
+
+[interface.alerts.telegram]
+bot_token = ""
+chat_id = ""
+
+[interface.reports]
+auto_generate = true
+frequency = "daily"
+format = "markdown"
+include_graph_viz = true
+max_signals_per_report = 50
