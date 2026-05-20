@@ -253,6 +253,53 @@ async def graph_full(max_nodes: int = 300, min_mentions: int = 1):
         return {"nodes": [], "edges": [], "events": [], "stats": {}, "error": str(e)}
 
 
+@dashboard_app.get("/api/causal/simulate")
+async def run_causal_simulation(
+    signal_id: str,
+    treatment: str,
+    outcome: str,
+    val: str = "inactive",
+):
+    """Run Pearl-based counterfactual simulation for a given signal and treatment/outcome."""
+    title = "Unknown Signal"
+    desc = ""
+    if _duckdb:
+        try:
+            rows = _duckdb.query(
+                "SELECT title, description FROM signal_log WHERE signal_id = ?",
+                (signal_id,)
+            )
+            if rows:
+                title = rows[0].get("title", title)
+                desc = rows[0].get("description", desc)
+        except Exception:
+            pass
+
+    from sentinel.intelligence.causal_simulator import CausalSimulator
+    from sentinel.core.lancedb_client import LanceDBClient
+    from sentinel.extraction.embedder import Embedder
+
+    try:
+        ldb = LanceDBClient()
+        await ldb.connect()
+        emb = Embedder()
+        
+        sim = CausalSimulator(lancedb_client=ldb, embedder=emb)
+        result = await sim.simulate_counterfactual(
+            signal_title=title,
+            signal_desc=desc,
+            treatment_node=treatment,
+            outcome_node=outcome,
+            intervention_val=val,
+        )
+        await ldb.close()
+        return result
+    except Exception as e:
+        logger.error("causal_simulation_endpoint_failed", error=str(e))
+        return {"status": "error", "error": str(e)}
+
+
+
 async def _build_snapshot() -> dict[str, Any]:
     """Build a complete system state snapshot."""
     data: dict[str, Any] = {

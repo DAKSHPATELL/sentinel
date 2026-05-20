@@ -449,7 +449,178 @@ body {
 }
 .empty-icon { font-size: 1.8rem; opacity: 0.3; }
 
-/* ─── RESPONSIVE ───────────────────────────────────────── */
+/* ─── CAUSAL SIMULATOR MODAL ───────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(4, 4, 8, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-container {
+  width: 90%;
+  max-width: 950px;
+  max-height: 85vh;
+  background: var(--bg-card);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.95);
+  transition: transform 0.3s ease;
+}
+.modal-overlay.open .modal-container {
+  transform: scale(1);
+}
+.modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 1px;
+}
+.modal-close-btn {
+  background: none; border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem; cursor: pointer;
+  transition: color 0.2s;
+}
+.modal-close-btn:hover { color: var(--accent-rose); }
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.sim-setup-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-right: 1px solid var(--border);
+  padding-right: 24px;
+}
+.sim-results-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-group label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+}
+.form-select, .form-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-select:focus, .form-input:focus { border-color: var(--accent-blue); }
+.sim-btn {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.sim-btn:hover { opacity: 0.9; }
+.sim-btn:active { transform: scale(0.98); }
+.sim-btn:disabled {
+  background: var(--border-accent);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.sim-metric-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.sim-metric-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.sim-metric-value {
+  font-family: var(--font-mono);
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.sim-metric-value.necessity { color: var(--accent-amber); }
+.sim-metric-value.sufficiency { color: var(--accent-green); }
+.sim-result-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  max-height: 250px;
+  overflow-y: auto;
+}
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.causal-path-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.causal-path-item {
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-left: 2px dashed var(--accent-cyan);
+  font-size: 0.8rem;
+}
+
 @media (max-width: 1200px) {
   .main-grid { grid-template-columns: 1fr 1fr; }
   .kpi-bar { grid-template-columns: repeat(3, 1fr); }
@@ -459,6 +630,7 @@ body {
   .kpi-bar { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
+
 </head>
 <body>
 
@@ -582,7 +754,100 @@ body {
   -->
 </div>
 
+<!-- ─── CAUSAL SIMULATION MODAL ────────────────────────── -->
+<div class="modal-overlay" id="causal-modal">
+  <div class="modal-container">
+    <div class="modal-header">
+      <div class="modal-title">Pearl Causal Simulator & Counterfactual Engine</div>
+      <button class="modal-close-btn" onclick="closeCausalSimulator()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Left: Simulation Setup -->
+      <div class="sim-setup-panel">
+        <h3 style="margin-top:0; color:var(--accent-blue);">Simulated Intervention</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
+          Perform Pearl do-calculus. Select a treatment entity to intervene upon and see the counterfactual effects downstream.
+        </p>
+        
+        <div class="form-group">
+          <label>Target Signal</label>
+          <div id="sim-signal-title" style="font-weight:700; font-size:0.95rem; color:#fff;"></div>
+          <div id="sim-signal-desc" style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;"></div>
+          <input type="hidden" id="sim-signal-id">
+        </div>
+        
+        <div class="form-group">
+          <label>Treatment Entity (Intervene On)</label>
+          <select id="sim-treatment" class="form-select"></select>
+        </div>
+        
+        <div class="form-group">
+          <label>Outcome Entity (Evaluate Downstream)</label>
+          <select id="sim-outcome" class="form-select"></select>
+        </div>
+        
+        <div class="form-group">
+          <label>Intervention: do(Treatment = value)</label>
+          <select id="sim-val" class="form-select">
+            <option value="inactive">INACTIVE (Simulate Removal / Sabotage)</option>
+            <option value="active">ACTIVE (Simulate Activation / Forced Occurrence)</option>
+          </select>
+        </div>
+        
+        <button id="sim-submit-btn" class="sim-btn" onclick="runSimulation()">
+          &#x25B6; Run Pearl Simulation
+        </button>
+      </div>
+      
+      <!-- Right: Simulation Results -->
+      <div class="sim-results-panel">
+        <div id="sim-initial-state" style="text-align:center; padding: 40px 20px; color:var(--text-muted);">
+          <div style="font-size:3rem; margin-bottom:12px; opacity:0.3;">&#x2696;</div>
+          <div>Select options on the left and click Run to generate simulated counterfactual universe.</div>
+        </div>
+        
+        <div id="sim-results-container" style="display:none; height:100%; display:flex; flex-direction:column; gap:16px;">
+          <!-- Necessity / Sufficiency scores -->
+          <div class="sim-metric-row">
+            <div class="sim-metric-card">
+              <span style="font-size:0.7rem; text-transform:uppercase; color:var(--text-muted);">Causal Necessity (P_N)</span>
+              <span id="sim-val-necessity" class="sim-metric-value necessity">-</span>
+            </div>
+            <div class="sim-metric-card">
+              <span style="font-size:0.7rem; text-transform:uppercase; color:var(--text-muted);">Causal Sufficiency (P_S)</span>
+              <span id="sim-val-sufficiency" class="sim-metric-value sufficiency">-</span>
+            </div>
+          </div>
+          
+          <!-- Detailed Report -->
+          <div class="form-group">
+            <label>Detailed Counterfactual Report</label>
+            <div id="sim-explanation" class="sim-result-box" style="height:120px;"></div>
+          </div>
+          
+          <!-- Pearl Steps Tabs/Rows -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+            <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
+              <span style="font-size:0.65rem; font-weight:700; color:var(--accent-amber);">1. ABDUCTION</span>
+              <div id="sim-abduction" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
+            </div>
+            <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
+              <span style="font-size:0.65rem; font-weight:700; color:var(--accent-blue);">2. ACTION</span>
+              <div id="sim-action" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
+            </div>
+            <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
+              <span style="font-size:0.65rem; font-weight:700; color:var(--accent-green);">3. PREDICTION</span>
+              <div id="sim-prediction" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+
 // ─── STATE ────────────────────────────────────────────
 let ws = null;
 let reconnectTimer = null;
@@ -653,6 +918,7 @@ function renderSignals(signals) {
     return;
   }
 
+  window.allSignals = signals;
   document.getElementById('signal-count').textContent = signals.length + ' signals';
   const newIds = new Set(signals.map(s => s.signal_id));
 
@@ -662,7 +928,7 @@ function renderSignals(signals) {
     const type = (s.signal_type || 'unknown').toLowerCase();
     const conf = s.confidence ? Math.round(s.confidence * 100) + '%' : '-';
     return `
-      <div class="signal-item ${isNew ? 'new' : ''}">
+      <div class="signal-item ${isNew ? 'new' : ''}" onclick="openCausalSimulator('${s.signal_id}')" style="cursor: pointer;">
         <div class="signal-priority ${priority}"></div>
         <div class="signal-content">
           <div class="signal-title">${escHtml(s.title || 'Untitled Signal')}</div>
@@ -677,6 +943,7 @@ function renderSignals(signals) {
 
   prevSignalIds = newIds;
 }
+
 
 function renderCrawls(crawls) {
   const container = document.getElementById('crawl-feed');
@@ -861,7 +1128,106 @@ function connect() {
   };
 }
 
+function openCausalSimulator(signalId) {
+  const signal = (window.allSignals || []).find(s => s.signal_id === signalId);
+  if (!signal) return;
+
+  // Set titles
+  document.getElementById('sim-signal-title').textContent = signal.title;
+  document.getElementById('sim-signal-desc').textContent = signal.description || 'No description available.';
+  document.getElementById('sim-signal-id').value = signal.signal_id;
+
+  // Clear previous options and results
+  const treatmentSelect = document.getElementById('sim-treatment');
+  treatmentSelect.innerHTML = '';
+  const outcomeSelect = document.getElementById('sim-outcome');
+  outcomeSelect.innerHTML = '';
+
+  // Get entities of the signal
+  let entities = [];
+  if (typeof signal.entities === 'string') {
+    try {
+      entities = JSON.parse(signal.entities);
+    } catch {
+      entities = signal.entities.split(',').map(x => x.trim()).filter(Boolean);
+    }
+  } else if (Array.isArray(signal.entities)) {
+    entities = signal.entities;
+  }
+
+  if (entities.length === 0) {
+    entities = ['No Entities Found'];
+  }
+
+  entities.forEach(ent => {
+    const opt1 = document.createElement('option');
+    opt1.value = ent;
+    opt1.textContent = ent;
+    treatmentSelect.appendChild(opt1);
+
+    const opt2 = document.createElement('option');
+    opt2.value = ent;
+    opt2.textContent = ent;
+    outcomeSelect.appendChild(opt2);
+  });
+
+  // Select second entity for outcome if available
+  if (entities.length > 1) {
+    outcomeSelect.selectedIndex = 1;
+  }
+
+  // Clear results view
+  document.getElementById('sim-results-container').style.display = 'none';
+  document.getElementById('sim-initial-state').style.display = 'block';
+
+  // Open modal
+  document.getElementById('causal-modal').classList.add('open');
+}
+
+function closeCausalSimulator() {
+  document.getElementById('causal-modal').classList.remove('open');
+}
+
+async function runSimulation() {
+  const signalId = document.getElementById('sim-signal-id').value;
+  const treatment = document.getElementById('sim-treatment').value;
+  const outcome = document.getElementById('sim-outcome').value;
+  const val = document.getElementById('sim-val').value;
+
+  const btn = document.getElementById('sim-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Simulating Pearl Model...';
+
+  try {
+    const response = await fetch(`/api/causal/simulate?signal_id=${encodeURIComponent(signalId)}&treatment=${encodeURIComponent(treatment)}&outcome=${encodeURIComponent(outcome)}&val=${encodeURIComponent(val)}`);
+    const data = await response.json();
+
+    btn.disabled = false;
+    btn.innerHTML = '&#x25B6; Run Pearl Simulation';
+
+    if (data.status === 'success') {
+      document.getElementById('sim-initial-state').style.display = 'none';
+      document.getElementById('sim-results-container').style.display = 'block';
+
+      // Set values
+      document.getElementById('sim-val-necessity').textContent = Math.round(data.causal_necessity * 100) + '%';
+      document.getElementById('sim-val-sufficiency').textContent = Math.round(data.causal_sufficiency * 100) + '%';
+      document.getElementById('sim-explanation').textContent = data.detailed_explanation;
+      document.getElementById('sim-abduction').textContent = data.abduction_notes;
+      document.getElementById('sim-action').textContent = data.action_adjustments;
+      document.getElementById('sim-prediction').textContent = data.prediction_outcome;
+    } else {
+      alert('Simulation failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = '&#x25B6; Run Pearl Simulation';
+    alert('Error running simulation: ' + e);
+  }
+}
+
 connect();
 </script>
 </body>
 </html>
+
