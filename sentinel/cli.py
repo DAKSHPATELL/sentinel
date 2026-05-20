@@ -172,7 +172,7 @@ def start(ctx: click.Context) -> None:
         red_team = RedTeamAgent(lance, duckdb, embedder)
         immune = ImmuneExplorer(duckdb)
         immune.initialize()
-        court = HypothesisCourt()
+        court = HypothesisCourt(lance, embedder)
         predictor = PredictiveCrawler(duckdb)
         predictor.initialize()
 

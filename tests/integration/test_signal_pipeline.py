@@ -107,14 +107,16 @@ def test_full_signal_pipeline_with_red_team(mock_lancedb, mock_duckdb, mock_embe
         # 4. Hypothesis Court
         court = HypothesisCourt()
         court._call_llm = AsyncMock(side_effect=[
-            "Advocate argument: High novelty and strong evidence.",
-            "Skeptic argument: The source is just a forum post.",
-            {"decision": "APPROVED", "reasoning": "Advocate is right", "final_confidence": 0.93}
+            "Advocate opening statement: High novelty and strong evidence.",
+            "Skeptic cross-examination: The source is just a forum post.",
+            "Advocate rebuttal: We corroborated it using other reliable sources.",
+            "Skeptic closing: The sources are still unverified.",
+            {"likelihood_adv": 0.85, "likelihood_skep": 0.90, "reasoning": "Advocate is right"}
         ])
 
         verdict = await court.evaluate(signal, causal_explanation=None)
         assert verdict.approved is True
-        assert verdict.final_confidence == 0.93
+        assert verdict.final_confidence == 0.99
         assert "Advocate is right" in verdict.reasoning
 
     asyncio.run(run_test())

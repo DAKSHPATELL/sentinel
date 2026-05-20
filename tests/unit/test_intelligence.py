@@ -156,3 +156,46 @@ def test_causal_simulator(mock_lancedb, mock_embedder):
 
         asyncio.run(run_sim_test())
 
+
+def test_hypothesis_court(mock_lancedb, mock_embedder):
+    """Test HypothesisCourt multi-turn debate and Bayesian updates."""
+    from uuid import uuid4
+    from datetime import datetime
+    from sentinel.intelligence.court import HypothesisCourt
+    from sentinel.models import Signal, SignalType, AlertPriority
+
+    signal = Signal(
+        id=uuid4(),
+        source_id=uuid4(),
+        target_url="https://test.com",
+        signal_type=SignalType.ANOMALY,
+        title="Test Anomaly",
+        description="An anomalous pattern was observed.",
+        entities=["Entity A", "Entity B"],
+        priority=AlertPriority.HIGH,
+        confidence=0.7,
+        evidence_urls=[],
+        detected_at=datetime.utcnow()
+    )
+
+    court = HypothesisCourt(mock_lancedb, mock_embedder)
+    court._call_llm = AsyncMock(side_effect=[
+        "Advocate opening: Signal is genuine.",
+        "Skeptic cross: This is just random noise.",
+        "Advocate rebuttal: Noise cannot explain the consistency.",
+        "Skeptic closing: Consistency alone is not proof.",
+        {"likelihood_adv": 0.9, "likelihood_skep": 0.8, "reasoning": "Reasonable case."}
+    ])
+
+    async def run_court_test():
+        verdict = await court.deliberate(signal)
+        assert verdict.approved is True
+        # Prior = 0.7. l_adv = 0.9. l_skep = 0.8.
+        # num = 0.7 * 0.9 = 0.63
+        # den = 0.63 + (1.0 - 0.7) * (1.0 - 0.8) = 0.63 + 0.3 * 0.2 = 0.63 + 0.06 = 0.69
+        # post = 0.63 / 0.69 = 0.913
+        assert verdict.final_confidence == 0.913
+        assert verdict.reasoning == "Reasonable case."
+
+    asyncio.run(run_court_test())
+
