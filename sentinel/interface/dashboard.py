@@ -299,6 +299,112 @@ async def run_causal_simulation(
         return {"status": "error", "error": str(e)}
 
 
+@dashboard_app.post("/api/court/deliberate")
+async def force_court_deliberation(signal_id: str):
+    """Force Hypothesis Court deliberation for a given signal on demand."""
+    if not _duckdb:
+        return {"status": "error", "error": "Database not initialized"}
+    
+    try:
+        rows = _duckdb.query(
+            "SELECT * FROM signal_log WHERE signal_id = ?",
+            (signal_id,)
+        )
+        if not rows:
+            return {"status": "error", "error": "Signal not found"}
+        row = rows[0]
+    except Exception as e:
+        return {"status": "error", "error": f"Failed to fetch signal: {e}"}
+
+    import uuid
+    import json
+    from sentinel.models import Signal, SignalType, AlertPriority
+    
+    entities = []
+    if row.get("entities"):
+        try:
+            entities = json.loads(row["entities"])
+        except Exception:
+            entities = [x.strip() for x in row["entities"].split(",") if x.strip()]
+            
+    source_types = []
+    if row.get("source_types"):
+        try:
+            source_types = json.loads(row["source_types"])
+        except Exception:
+            pass
+
+    evidence_urls = []
+    if row.get("evidence_urls"):
+        try:
+            evidence_urls = json.loads(row["evidence_urls"])
+        except Exception:
+            pass
+
+    metadata = {}
+    if row.get("metadata"):
+        try:
+            metadata = json.loads(row["metadata"])
+        except Exception:
+            pass
+
+    signal = Signal(
+        id=uuid.UUID(row["signal_id"]),
+        signal_type=SignalType(row["signal_type"]),
+        priority=AlertPriority(row["priority"]),
+        title=row["title"],
+        description=row["description"],
+        entities=entities,
+        source_types=source_types,
+        evidence_urls=evidence_urls,
+        confidence=float(row["confidence"]),
+        metadata=metadata
+    )
+
+    from sentinel.intelligence.court import HypothesisCourt
+    from sentinel.core.lancedb_client import LanceDBClient
+    from sentinel.extraction.embedder import Embedder
+
+    try:
+        ldb = LanceDBClient()
+        await ldb.connect()
+        emb = Embedder()
+        
+        court = HypothesisCourt(lancedb_client=ldb, embedder=emb)
+        verdict = await court.deliberate(signal)
+        await ldb.close()
+        
+        signal.confidence = verdict.final_confidence
+        signal.metadata["verdict"] = {
+            "approved": verdict.approved,
+            "reasoning": verdict.reasoning,
+            "advocate_argument": verdict.advocate_argument,
+            "skeptic_argument": verdict.skeptic_argument,
+            "final_confidence": verdict.final_confidence
+        }
+        
+        _duckdb.execute(
+            """
+            UPDATE signal_log
+            SET confidence = ?, metadata = ?
+            WHERE signal_id = ?
+            """,
+            (
+                signal.confidence,
+                json.dumps(signal.metadata),
+                str(signal.id),
+            ),
+        )
+        
+        return {
+            "status": "success",
+            "verdict": signal.metadata["verdict"]
+        }
+    except Exception as e:
+        logger.error("court_deliberation_endpoint_failed", error=str(e))
+        return {"status": "error", "error": str(e)}
+
+
 
 async def _build_snapshot() -> dict[str, Any]:
     """Build a complete system state snapshot."""
@@ -361,7 +467,7 @@ async def _build_snapshot() -> dict[str, Any]:
         try:
             data["signals"] = _duckdb.query(
                 """SELECT signal_id, signal_type, priority, title, confidence,
-                          detected_at, entities, source_types
+                          detected_at, entities, source_types, metadata
                    FROM signal_log ORDER BY detected_at DESC LIMIT 30"""
             )
         except Exception:

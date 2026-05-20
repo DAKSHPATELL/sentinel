@@ -621,6 +621,176 @@ body {
   font-size: 0.8rem;
 }
 
+/* ─── TABS & PANEL STRUCTURE ───────────────────────────── */
+.modal-tabs {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.modal-tab {
+  flex: 1;
+  background: var(--bg-card);
+  border: none;
+  padding: 12px 16px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+  border-bottom: 2px solid transparent;
+}
+.modal-tab:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.modal-tab.active {
+  background: var(--bg-secondary);
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+}
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  min-height: 55vh;
+  position: relative;
+}
+.modal-panel {
+  display: none;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 24px;
+  height: 100%;
+}
+.modal-panel.active {
+  display: grid;
+}
+
+/* ─── COURT STYLING ────────────────────────────────────── */
+.court-metadata-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-right: 1px solid var(--border);
+  padding-right: 24px;
+}
+.court-debate-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+.court-bubble {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  position: relative;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.court-bubble:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.court-role-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.court-role-header .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+.court-bubble-advocate {
+  border-left: 3px solid var(--accent-green);
+}
+.court-bubble-advocate .court-role-header {
+  color: var(--accent-green);
+}
+.court-bubble-advocate .court-role-header .dot {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+}
+.court-bubble-skeptic {
+  border-left: 3px solid var(--accent-rose);
+}
+.court-bubble-skeptic .court-role-header {
+  color: var(--accent-rose);
+}
+.court-bubble-skeptic .court-role-header .dot {
+  background: var(--accent-rose);
+  box-shadow: 0 0 8px var(--accent-rose);
+}
+.court-bubble-judge {
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-left: 4px solid var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.03);
+  box-shadow: inset 0 0 15px rgba(0, 240, 255, 0.05);
+}
+.court-bubble-judge .court-role-header {
+  color: var(--accent-cyan);
+}
+.court-bubble-judge .court-role-header .dot {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+}
+.court-body-text {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+/* ─── BAYESIAN PROGRESS ────────────────────────────────── */
+.bayes-track {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  position: relative;
+}
+.bayes-prog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+.bayes-prog-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+  position: relative;
+}
+.bayes-prog-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-rose), var(--accent-cyan));
+  border-radius: 4px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bayes-shift-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--border-accent);
+  color: var(--text-primary);
+}
+
 @media (max-width: 1200px) {
   .main-grid { grid-template-columns: 1fr 1fr; }
   .kpi-bar { grid-template-columns: repeat(3, 1fr); }
@@ -758,90 +928,157 @@ body {
 <div class="modal-overlay" id="causal-modal">
   <div class="modal-container">
     <div class="modal-header">
-      <div class="modal-title">Pearl Causal Simulator & Counterfactual Engine</div>
+      <div class="modal-title" id="modal-signal-header-title">Signal Analysis & Intelligence Court</div>
       <button class="modal-close-btn" onclick="closeCausalSimulator()">&times;</button>
     </div>
+    
+    <!-- Tabs Header -->
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-court-btn" onclick="switchModalTab('court')">
+        ⚖️ Bayesian Hypothesis Court
+      </button>
+      <button class="modal-tab" id="tab-causal-btn" onclick="switchModalTab('causal')">
+        🕸️ Pearl Causal Simulator
+      </button>
+    </div>
+
     <div class="modal-body">
-      <!-- Left: Simulation Setup -->
-      <div class="sim-setup-panel">
-        <h3 style="margin-top:0; color:var(--accent-blue);">Simulated Intervention</h3>
-        <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
-          Perform Pearl do-calculus. Select a treatment entity to intervene upon and see the counterfactual effects downstream.
-        </p>
-        
-        <div class="form-group">
-          <label>Target Signal</label>
-          <div id="sim-signal-title" style="font-weight:700; font-size:0.95rem; color:#fff;"></div>
-          <div id="sim-signal-desc" style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;"></div>
-          <input type="hidden" id="sim-signal-id">
+      
+      <!-- Panel 1: Bayesian Hypothesis Court -->
+      <div class="modal-panel active" id="panel-court">
+        <!-- Left: Bayesian Analysis & Metadata -->
+        <div class="court-metadata-panel">
+          <div class="form-group">
+            <label>Observed Signal</label>
+            <div id="court-signal-title" style="font-weight:700; font-size:1.05rem; color:#fff;"></div>
+            <div id="court-signal-desc" style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px; line-height:1.45;"></div>
+          </div>
+
+          <div class="form-group" id="court-bayes-container">
+            <label>Bayesian Belief Update Path</label>
+            <div class="bayes-track">
+              <div class="bayes-prog-row">
+                <span>Prior Confidence:</span>
+                <span id="court-val-prior" style="font-weight:600; color:var(--text-secondary);">-</span>
+              </div>
+              <div class="bayes-prog-row" id="court-redteam-row" style="display:none;">
+                <span>Red Team Adjustment:</span>
+                <span id="court-val-redteam" class="bayes-shift-badge">-</span>
+              </div>
+              <div class="bayes-prog-row">
+                <span>Judge Posterior Confidence:</span>
+                <span id="court-val-posterior" style="font-weight:700; color:var(--accent-cyan); font-size:0.95rem;">-</span>
+              </div>
+              
+              <!-- Belief Update Visual Bar -->
+              <div class="bayes-prog-bar-container">
+                <div class="bayes-prog-bar-fill" id="court-val-fill" style="width: 0%;"></div>
+              </div>
+              
+              <div class="bayes-prog-row" style="margin-top:6px; font-size:0.7rem; color:var(--text-muted);">
+                <span>Likelihood ratio: Advocate/Skeptic</span>
+                <span id="court-val-lratio" style="font-family:var(--font-mono); font-weight:600;">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:auto;">
+            <button id="court-force-btn" class="sim-btn" onclick="triggerManualDeliberation()" style="width:100%; border:1px solid rgba(0,240,255,0.4); background: rgba(0,240,255,0.05);">
+              ⚖️ Force Hypothesis Court Debate
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Timeline Debate Transcript -->
+        <div class="court-debate-panel" id="court-debate-transcript">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- Panel 2: Pearl Causal Simulator -->
+      <div class="modal-panel" id="panel-causal">
+        <!-- Left: Simulation Setup -->
+        <div class="sim-setup-panel">
+          <h3 style="margin-top:0; color:var(--accent-blue);">Simulated Intervention</h3>
+          <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
+            Perform Pearl do-calculus. Select a treatment entity to intervene upon and see the counterfactual effects downstream.
+          </p>
+          
+          <div class="form-group">
+            <label>Target Signal</label>
+            <div id="sim-signal-title" style="font-weight:700; font-size:0.95rem; color:#fff;"></div>
+            <div id="sim-signal-desc" style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;"></div>
+            <input type="hidden" id="sim-signal-id">
+          </div>
+          
+          <div class="form-group">
+            <label>Treatment Entity (Intervene On)</label>
+            <select id="sim-treatment" class="form-select"></select>
+          </div>
+          
+          <div class="form-group">
+            <label>Outcome Entity (Evaluate Downstream)</label>
+            <select id="sim-outcome" class="form-select"></select>
+          </div>
+          
+          <div class="form-group">
+            <label>Intervention: do(Treatment = value)</label>
+            <select id="sim-val" class="form-select">
+              <option value="inactive">INACTIVE (Simulate Removal / Sabotage)</option>
+              <option value="active">ACTIVE (Simulate Activation / Forced Occurrence)</option>
+            </select>
+          </div>
+          
+          <button id="sim-submit-btn" class="sim-btn" onclick="runSimulation()">
+            &#x25B6; Run Pearl Simulation
+          </button>
         </div>
         
-        <div class="form-group">
-          <label>Treatment Entity (Intervene On)</label>
-          <select id="sim-treatment" class="form-select"></select>
+        <!-- Right: Simulation Results -->
+        <div class="sim-results-panel">
+          <div id="sim-initial-state" style="text-align:center; padding: 40px 20px; color:var(--text-muted);">
+            <div style="font-size:3rem; margin-bottom:12px; opacity:0.3;">&#x2696;</div>
+            <div>Select options on the left and click Run to generate simulated counterfactual universe.</div>
+          </div>
+          
+          <div id="sim-results-container" style="display:none; height:100%; display:flex; flex-direction:column; gap:16px;">
+            <!-- Necessity / Sufficiency scores -->
+            <div class="sim-metric-row">
+              <div class="sim-metric-card">
+                <span style="font-size:0.7rem; text-transform:uppercase; color:var(--text-muted);">Causal Necessity (P_N)</span>
+                <span id="sim-val-necessity" class="sim-metric-value necessity">-</span>
+              </div>
+              <div class="sim-metric-card">
+                <span style="font-size:0.7rem; text-transform:uppercase; color:var(--text-muted);">Causal Sufficiency (P_S)</span>
+                <span id="sim-val-sufficiency" class="sim-metric-value sufficiency">-</span>
+              </div>
+            </div>
+            
+            <!-- Detailed Report -->
+            <div class="form-group">
+              <label>Detailed Counterfactual Report</label>
+              <div id="sim-explanation" class="sim-result-box" style="height:120px;"></div>
+            </div>
+            
+            <!-- Pearl Steps Tabs/Rows -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+              <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
+                <span style="font-size:0.65rem; font-weight:700; color:var(--accent-amber);">1. ABDUCTION</span>
+                <div id="sim-abduction" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
+              </div>
+              <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
+                <span style="font-size:0.65rem; font-weight:700; color:var(--accent-blue);">2. ACTION</span>
+                <div id="sim-action" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
+              </div>
+              <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
+                <span style="font-size:0.65rem; font-weight:700; color:var(--accent-green);">3. PREDICTION</span>
+                <div id="sim-prediction" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <div class="form-group">
-          <label>Outcome Entity (Evaluate Downstream)</label>
-          <select id="sim-outcome" class="form-select"></select>
-        </div>
-        
-        <div class="form-group">
-          <label>Intervention: do(Treatment = value)</label>
-          <select id="sim-val" class="form-select">
-            <option value="inactive">INACTIVE (Simulate Removal / Sabotage)</option>
-            <option value="active">ACTIVE (Simulate Activation / Forced Occurrence)</option>
-          </select>
-        </div>
-        
-        <button id="sim-submit-btn" class="sim-btn" onclick="runSimulation()">
-          &#x25B6; Run Pearl Simulation
-        </button>
       </div>
       
-      <!-- Right: Simulation Results -->
-      <div class="sim-results-panel">
-        <div id="sim-initial-state" style="text-align:center; padding: 40px 20px; color:var(--text-muted);">
-          <div style="font-size:3rem; margin-bottom:12px; opacity:0.3;">&#x2696;</div>
-          <div>Select options on the left and click Run to generate simulated counterfactual universe.</div>
-        </div>
-        
-        <div id="sim-results-container" style="display:none; height:100%; display:flex; flex-direction:column; gap:16px;">
-          <!-- Necessity / Sufficiency scores -->
-          <div class="sim-metric-row">
-            <div class="sim-metric-card">
-              <span style="font-size:0.7rem; text-transform:uppercase; color:var(--text-muted);">Causal Necessity (P_N)</span>
-              <span id="sim-val-necessity" class="sim-metric-value necessity">-</span>
-            </div>
-            <div class="sim-metric-card">
-              <span style="font-size:0.7rem; text-transform:uppercase; color:var(--text-muted);">Causal Sufficiency (P_S)</span>
-              <span id="sim-val-sufficiency" class="sim-metric-value sufficiency">-</span>
-            </div>
-          </div>
-          
-          <!-- Detailed Report -->
-          <div class="form-group">
-            <label>Detailed Counterfactual Report</label>
-            <div id="sim-explanation" class="sim-result-box" style="height:120px;"></div>
-          </div>
-          
-          <!-- Pearl Steps Tabs/Rows -->
-          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
-            <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
-              <span style="font-size:0.65rem; font-weight:700; color:var(--accent-amber);">1. ABDUCTION</span>
-              <div id="sim-abduction" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
-            </div>
-            <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
-              <span style="font-size:0.65rem; font-weight:700; color:var(--accent-blue);">2. ACTION</span>
-              <div id="sim-action" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
-            </div>
-            <div class="sim-metric-card" style="padding:8px; text-align:left; align-items:flex-start;">
-              <span style="font-size:0.65rem; font-weight:700; color:var(--accent-green);">3. PREDICTION</span>
-              <div id="sim-prediction" style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; max-height:80px; overflow-y:auto; line-height:1.3;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -1128,16 +1365,47 @@ function connect() {
   };
 }
 
+function switchModalTab(tabName) {
+  // Toggle tab buttons
+  document.getElementById('tab-court-btn').classList.toggle('active', tabName === 'court');
+  document.getElementById('tab-causal-btn').classList.toggle('active', tabName === 'causal');
+  
+  // Toggle panels
+  document.getElementById('panel-court').classList.toggle('active', tabName === 'court');
+  document.getElementById('panel-causal').classList.toggle('active', tabName === 'causal');
+}
+
 function openCausalSimulator(signalId) {
   const signal = (window.allSignals || []).find(s => s.signal_id === signalId);
   if (!signal) return;
 
-  // Set titles
+  // Track active signal ID globally
+  window.activeSignalId = signalId;
+
+  // Set titles & desc
+  document.getElementById('court-signal-title').textContent = signal.title;
+  document.getElementById('court-signal-desc').textContent = signal.description || 'No description available.';
   document.getElementById('sim-signal-title').textContent = signal.title;
   document.getElementById('sim-signal-desc').textContent = signal.description || 'No description available.';
   document.getElementById('sim-signal-id').value = signal.signal_id;
 
-  // Clear previous options and results
+  // Switch to Court tab initially
+  switchModalTab('court');
+
+  // Parse metadata safely
+  let meta = {};
+  if (signal.metadata) {
+    if (typeof signal.metadata === 'string') {
+      try { meta = JSON.parse(signal.metadata); } catch(e) {}
+    } else {
+      meta = signal.metadata;
+    }
+  }
+
+  // Render court info
+  renderCourtPanel(signal, meta);
+
+  // Clear previous options and results for Causal Simulator
   const treatmentSelect = document.getElementById('sim-treatment');
   treatmentSelect.innerHTML = '';
   const outcomeSelect = document.getElementById('sim-outcome');
@@ -1171,7 +1439,6 @@ function openCausalSimulator(signalId) {
     outcomeSelect.appendChild(opt2);
   });
 
-  // Select second entity for outcome if available
   if (entities.length > 1) {
     outcomeSelect.selectedIndex = 1;
   }
@@ -1182,6 +1449,118 @@ function openCausalSimulator(signalId) {
 
   // Open modal
   document.getElementById('causal-modal').classList.add('open');
+}
+
+function renderCourtPanel(signal, meta) {
+  const prior = 0.8; // default prior base
+  let currentConfidence = signal.confidence || 0.5;
+  
+  document.getElementById('court-val-prior').textContent = prior;
+  
+  const redteamRow = document.getElementById('court-redteam-row');
+  if (meta.red_team) {
+    redteamRow.style.display = 'flex';
+    document.getElementById('court-val-redteam').textContent = meta.red_team.adjusted_confidence;
+    document.getElementById('court-val-redteam').className = 'bayes-shift-badge ' + (meta.red_team.survived ? 'green' : 'red');
+  } else {
+    redteamRow.style.display = 'none';
+  }
+
+  document.getElementById('court-val-posterior').textContent = Math.round(currentConfidence * 100) + '%';
+  document.getElementById('court-val-fill').style.width = (currentConfidence * 100) + '%';
+
+  const transcript = document.getElementById('court-debate-transcript');
+  
+  if (meta.verdict) {
+    const verdict = meta.verdict;
+    document.getElementById('court-val-lratio').textContent = verdict.final_confidence ? verdict.final_confidence.toFixed(2) : '-';
+    
+    transcript.innerHTML = `
+      <div class="court-bubble court-bubble-advocate">
+        <div class="court-role-header"><span class="dot"></span>Advocate Opening Statement</div>
+        <div class="court-body-text">${escHtml(verdict.advocate_argument || 'Case supported by fact context.')}</div>
+      </div>
+      <div class="court-bubble court-bubble-skeptic">
+        <div class="court-role-header"><span class="dot"></span>Skeptic Cross-Examination</div>
+        <div class="court-body-text">${escHtml(verdict.skeptic_argument || 'Alternative hypotheses and source reliability challenged.')}</div>
+      </div>
+      <div class="court-bubble court-bubble-judge">
+        <div class="court-role-header"><span class="dot"></span>Judge Final Verdict</div>
+        <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">
+          Status: ${verdict.approved ? '<span style="color:var(--accent-green);">APPROVED</span>' : '<span style="color:var(--accent-rose);">REJECTED</span>'}
+          (Confidence: ${Math.round(verdict.final_confidence * 100)}%)
+        </div>
+        <div class="court-body-text" style="font-style:italic;">${escHtml(verdict.reasoning || 'Bayesian debate complete.')}</div>
+      </div>
+    `;
+    document.getElementById('court-force-btn').textContent = '⚖️ Re-Run Hypothesis Court Debate';
+  } else {
+    document.getElementById('court-val-lratio').textContent = 'N/A';
+    transcript.innerHTML = `
+      <div style="text-align:center; padding: 60px 20px; color:var(--text-muted);">
+        <div style="font-size:3.5rem; margin-bottom:12px; opacity:0.25;">⚖️</div>
+        <div style="font-weight:600; color:var(--text-secondary); margin-bottom:8px;">Bypassed Deliberation</div>
+        <div style="font-size:0.8rem; line-height:1.4; max-width:320px; margin:0 auto;">
+          This signal did not trigger automatic deliberation (requires confidence &ge; 0.6 and high/critical priority).
+        </div>
+      </div>
+    `;
+    document.getElementById('court-force-btn').textContent = '⚖️ Force Hypothesis Court Debate';
+  }
+}
+
+async function triggerManualDeliberation() {
+  const signalId = window.activeSignalId;
+  if (!signalId) return;
+
+  const btn = document.getElementById('court-force-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Convening Court Agents...';
+
+  try {
+    const response = await fetch(`/api/court/deliberate?signal_id=${encodeURIComponent(signalId)}`, {
+      method: 'POST'
+    });
+    const data = await response.json();
+    btn.disabled = false;
+    btn.textContent = originalText;
+
+    if (data.status === 'success') {
+      // Find signal in local array and update it
+      const signalIndex = (window.allSignals || []).find(s => s.signal_id === signalId);
+      if (signalIndex !== -1) {
+        window.allSignals[signalIndex].confidence = data.verdict.final_confidence;
+        window.allSignals[signalIndex].metadata = JSON.stringify({
+          ...JSON.parse(window.allSignals[signalIndex].metadata || '{}'),
+          verdict: data.verdict
+        });
+      }
+      
+      // Refetch all snapshot data to refresh UI cleanly
+      fetch('/api/system-snapshot')
+        .then(r => r.json())
+        .then(d => {
+          renderKPIs(d);
+          renderSignals(d.signals);
+          // Highlight active signal and render court details
+          const updatedSignal = (d.signals || []).find(s => s.signal_id === signalId);
+          if (updatedSignal) {
+            let parsedMeta = {};
+            if (updatedSignal.metadata) {
+              try { parsedMeta = JSON.parse(updatedSignal.metadata); } catch(e) { parsedMeta = updatedSignal.metadata; }
+            }
+            renderCourtPanel(updatedSignal, parsedMeta);
+          }
+        });
+    } else {
+      alert('Deliberation failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    alert('Error running deliberation: ' + e);
+  }
 }
 
 function closeCausalSimulator() {

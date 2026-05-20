@@ -345,12 +345,17 @@ class SignalProcessingLoop:
             if signal.priority.value in ("high", "critical"):
                 try:
                     challenge = await self._red_team.challenge(signal)
+                    signal.confidence = challenge.adjusted_confidence
+                    signal.metadata["red_team"] = {
+                        "adjusted_confidence": challenge.adjusted_confidence,
+                        "survived": challenge.survived,
+                        "kill_reason": challenge.kill_reason,
+                        "details": challenge.details
+                    }
+                    self._aggregator.update_signal_in_db(signal)
                     if not challenge.survived:
                         logger.info("signal_killed_by_red_team", signal_id=str(signal.id), reason=challenge.kill_reason)
                         continue
-
-                    # Update confidence with red team adjustment
-                    signal.confidence = challenge.adjusted_confidence
                 except Exception as e:
                     logger.warning("red_team_challenge_failed", error=str(e))
 
@@ -358,10 +363,18 @@ class SignalProcessingLoop:
             if signal.confidence >= 0.6 and signal.priority.value in ("high", "critical"):
                 try:
                     verdict = await self._court.deliberate(signal)
+                    signal.confidence = verdict.final_confidence
+                    signal.metadata["verdict"] = {
+                        "approved": verdict.approved,
+                        "reasoning": verdict.reasoning,
+                        "advocate_argument": verdict.advocate_argument,
+                        "skeptic_argument": verdict.skeptic_argument,
+                        "final_confidence": verdict.final_confidence
+                    }
+                    self._aggregator.update_signal_in_db(signal)
                     if not verdict.approved:
                         logger.info("signal_rejected_by_court", signal_id=str(signal.id))
                         continue
-                    signal.confidence = verdict.final_confidence
                 except Exception as e:
                     logger.warning("court_deliberation_failed", error=str(e))
 

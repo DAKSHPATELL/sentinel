@@ -247,6 +247,27 @@ class SignalAggregator:
         except Exception:
             return []
 
+    def update_signal_in_db(self, signal: Signal) -> None:
+        """Update an existing signal's confidence, priority, and metadata in DuckDB."""
+        import json
+        try:
+            self._duckdb.execute(
+                """
+                UPDATE signal_log
+                SET confidence = ?, priority = ?, metadata = ?
+                WHERE signal_id = ?
+                """,
+                (
+                    signal.confidence,
+                    signal.priority.value,
+                    json.dumps(signal.metadata),
+                    str(signal.id),
+                ),
+            )
+            logger.info("signal_updated_in_db", signal_id=str(signal.id), confidence=signal.confidence)
+        except Exception as e:
+            logger.error("update_signal_failed", signal_id=str(signal.id), error=str(e))
+
     def mark_signal_useful(self, signal_id: str, useful: bool) -> None:
         """Mark a signal as useful/not useful (human feedback)."""
         try:
